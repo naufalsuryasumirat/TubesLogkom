@@ -284,8 +284,11 @@ start_encounter :-
 end_encounter :-
     encounter(yes),
     retract(encounter(yes)),
-    asserta(encounter(no)).
+    asserta(encounter(no)),
+    retract(special_counter(_)),
+    asserta(special_counter(0)).
     /* tambahin retract special_counter */
+    /* CEK */
 
 encounter_chance(X) :-
     between(1, 10, X),
@@ -483,7 +486,7 @@ specialAttack :-
     player(AttP, _, _),
     battle_slime(Att, Def, HP), !,
     special_counter(Count),
-    0 =:= mod(Count, 3), !,
+    check_special(Count), !,
     retract(battle_slime(_, _, _)),
     NewAttP is AttP * 3,
     AttDealt is NewAttP - Def,
@@ -499,7 +502,7 @@ specialAttack :-
     player(AttP, _, _),
     battle_wolf(Att, Def, HP), !,
     special_counter(Count),
-    0 =:= mod(Count, 3), !,
+    check_special(Count), !,
     retract(battle_wolf(_, _, _)),
     NewAttP is AttP * 3,
     AttDealt is NewAttP - Def,
@@ -515,7 +518,7 @@ specialAttack :-
     player(AttP, _, _),
     battle_goblin(Att, Def, HP), !,
     special_counter(Count),
-    0 =:= mod(Count, 3), !,
+    check_special(Count), !,
     retract(battle_goblin(_, _, _)),
     NewAttP is AttP * 3,
     AttDealt is NewAttP - Def,
@@ -538,7 +541,8 @@ check_special(X) :-
 
 check_special(X) :-
     Y is mod(X, 3),
-    format('You have to wait ~w turns to use special attack', [Y]), fail.
+    Z is 3 - Y,
+    format('You have to wait ~w turns to use special attack', [Z]), fail.
 
 
 /* tentuin begini apa engga pakenya ngurangin hp enemy */
