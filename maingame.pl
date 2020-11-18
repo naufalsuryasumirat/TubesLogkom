@@ -29,11 +29,12 @@ start :-
     write('2. Archer'),nl,
     write('3. Sorcerer'),nl,
     read(JobNum),
-    ((JobNum = 1, asserta(job(swordsman)));
-    (JobNum = 2, asserta(job(archer)));
-    (JobNum = 3, asserta(job(sorcerer)))), 
+    ((JobNum = 1, asserta(job(swordsman)), write('Anda memilih class Swordsman, good luck boi'), nl);
+    (JobNum = 2, asserta(job(archer)), write('Anda memilih class Archer, good luck boi'), nl);
+    (JobNum = 3, asserta(job(sorcerer)), write('Anda memilih class Sorcerer, good luck boi'), nl)), 
     retract(started(no)),
-    asserta(started(yes)),!.
+    asserta(started(yes)),!,
+    map.
 
 start :-
     started(yes), !,
@@ -124,7 +125,13 @@ printCenterX(XMid,Y):-
 printCenterX(0,_):-
     printBorderTB(1),!.
 
-map :- printMap(12, 12).
+map :- 
+    started(yes), !,
+    printMap(12, 12), !.
+
+map :-
+    started(no), !,
+    write('Anda belum start game'), nl.
 
 /*--------------------------------------------------------------------------*/
 
@@ -143,7 +150,7 @@ w :-
 
 w :-
     encounter(no),
-    write('Anda tertabrak'), nl.
+    write('Anda tertabrak'), nl, !.
 
 w :-
     encounter(yes),
@@ -163,7 +170,7 @@ a :-
 
 a :-
     encounter(no),
-    write('Anda tertabrak'), nl.
+    write('Anda tertabrak'), nl, !.
 
 a :-
     encounter(yes),
@@ -183,7 +190,7 @@ s :-
 
 s :-
     encounter(no),
-    write('Anda tertabrak'), nl.
+    write('Anda tertabrak'), nl, !.
 
 s :-
     encounter(yes),
@@ -203,7 +210,7 @@ d :-
 
 d :-
     encounter(no),
-    write('Anda tertabrak'), nl.
+    write('Anda tertabrak'), nl, !.
 
 d :-
     encounter(yes),
@@ -212,10 +219,32 @@ d :-
 /*--------------------------------------------------------------------------*/
 
 /* Status Player */
+/* playerData([], [], [], [], []).
+playerData([A|V], [B|W], [C,X], [D,Y], [E,Z]) :- */
+
+playerName(nama).
+playerData(15, 10, 20).
+playerLVL(1, 0).
+playerGold(0).
+
+status :-
+    write('Your status : '), nl,
+    write('Job : '), nl,
+    write('Health : '), nl,
+    write('Attack : ') , nl,
+    write('Defense : '), nl,
+    write('Exp : '), nl,
+    write('Gold : '),nl.
 
 
 /*--------------------------------------------------------------------------*/
-
+/* Enemy Status */
+:- dynamic(slime/3).
+:- dynamic(wolf/3).
+:- dynamic(goblin/3).
+slime(1, 1, 30).
+wolf(5, 5, 30).
+goblin(10, 5, 40).
 /* Enemy Encounter */
 encounter(no).
 
@@ -232,17 +261,29 @@ end_encounter :-
 encounter_chance(X) :-
     between(1, 10, X),
     start_encounter,
-    write('Anda bertemu dengan slime'), nl.
+    write('Anda bertemu dengan slime'), nl,
+    asserta(encounter_slime(yes)),
+    battle_menu,
+    slime(Attack, Defense, HP),
+    asserta(battle_slime(Attack, Defense, HP)).
 
 encounter_chance(X) :-
     between(11, 15, X),
     start_encounter,
-    write('Anda bertemu dengan wolf'), nl.
+    write('Anda bertemu dengan wolf'), nl,
+    battle_menu,
+    asserta(encounter_wolf(yes)),
+    wolf(Attack, Defense, HP),
+    asserta(battle_wolf(Attack, Defense, HP)).
 
 encounter_chance(X) :-
     between(16, 20, X),
     start_encounter,
-    write('Anda bertemu dengan goblin'), nl.
+    write('Anda bertemu dengan goblin'), nl,
+    battle_menu,
+    asserta(encounter_goblin(yes)),
+    goblin(Attack, Defense, HP),
+    asserta(battle_goblin(Attack, Defense, HP)).
 
 encounter_chance(101) :-
     start_encounter,
@@ -252,7 +293,7 @@ check_lock(X, Y) :-
     \+ store(X, Y),
     \+ quest(X, Y),
     \+ bosNaga(X, Y),
-    random(1, 100, Z),
+    random(1, 101, Z),
     encounter_chance(Z).
 
 check_lock(X,Y) :-
@@ -267,10 +308,75 @@ check_lock(X, Y) :-
     quest(X, Y), !,
     write('Anda berada dalam Guild, ambil quest?').
 
+battle_menu :-
+    write('Apa yang Anda akan lakukan?'), nl,
+    write('Attack?'), nl,
+    write('Use Potion?'), nl,
+    write('Run?'), nl.
+
 /*--------------------------------------------------------------------------*/
-
+/* TEST*/
+player(10, 10, 40). %Swordsman
+:- dynamic(battle_goblin/3).
+:- dynamic(battle_slime/3).
+:- dynamic(battle_wolf/3).
 /* Battle Mechanism */
+run :-
+    encounter(yes),
+    random(1, 11, X),
+    run_success(X), !.
 
+run :-
+    encounter(no),
+    write('Anda tidak sedang di dalam battle'), nl.
+
+run_success(X) :-
+    X > 4,
+    write('Run gagal, turn diberikan ke musuh'), nl.
+
+run_success(X) :-
+    between(1, 4, X),
+    write('Run berhasil'), nl,
+    end_encounter.
+
+attack :-
+    encounter(yes),
+    battle_slime(Attack, Defense, HP), !,
+    player(AttackP, _, _),
+    newHP is HP - AttackP + Defense,
+    newAttack is Attack,
+    newDefense is Defense,
+    retract(battle_slime(_, _, _)),
+    asserta(battle_slime(newAttack, newDefense, newHP)).
+    /*newHP <= 0,
+    write('Slime telah mati.'), nl,
+    retract(battle_slime(_,_,_)),
+    end_encounter.*/
+
+attack :-
+    encounter(yes),
+    battle_goblin(Attack, Defense, HP), !,
+    player(AttackP, _, _),
+    newHP is HP - AttackP + Defense,
+    retract(battle_goblin(_, _, _)),
+    asserta(battle_goblin(Attack, Defense, newHP)).
+    /*newHP <= 0,
+    write('Goblin telah mati.'), nl,
+    retract(battle_goblin(_,_,_)),
+    end_encounter.*/
+    
+
+attack :-
+    encounter(yes),
+    battle_wolf(Attack, Defense, HP), !,
+    player(AttackP, _, _),
+    newHP is HP - AttackP + Defense,
+    retract(battle_wolf(_, _, _)),
+    asserta(battle_wolf(Attack, Defense, newHP)).
+    /*newHP <= 0,
+    write('Wolf telah mati.'), nl,
+    retract(battle_wolf(_,_,_)),
+    end_encounter.*/
 /*--------------------------------------------------------------------------*/
 
 /* Store */
