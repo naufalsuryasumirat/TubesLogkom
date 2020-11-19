@@ -157,6 +157,7 @@ map :-
 
 /* WASD */
 w :-
+    started(yes),
     encounter(no),
     player(X, Y),
     Y2 is Y + 1,
@@ -169,14 +170,22 @@ w :-
     check_lock(X2,Y2), !.
 
 w :-
+    started(yes),
     encounter(no),
     write('Anda tertabrak'), nl, !.
 
 w :-
+    started(yes),
     encounter(yes),
     write('Anda sedang dalam battle'), nl.
 
+w :-
+    started(no),
+    encounter(no),
+    write('Anda belum memulai game'), nl, !.
+
 a :-
+    started(yes),
     encounter(no),
     player(X, Y),
     X2 is X + 1,
@@ -189,14 +198,22 @@ a :-
     check_lock(X2,Y2), !.
 
 a :-
+    started(yes),
     encounter(no),
     write('Anda tertabrak'), nl, !.
 
 a :-
+    started(yes),
     encounter(yes),
     write('Anda sedang dalam battle'), nl.
 
+a :-
+    started(no),
+    encounter(no),
+    write('Anda belum memulai game'), nl, !.
+
 s :-
+    started(yes),
     encounter(no),
     player(X, Y),
     Y2 is Y - 1,
@@ -209,14 +226,22 @@ s :-
     check_lock(X2,Y2), !.
 
 s :-
+    started(yes),
     encounter(no),
     write('Anda tertabrak'), nl, !.
 
 s :-
+    started(yes),
     encounter(yes),
     write('Anda sedang dalam battle'), nl.
 
+s :-
+    started(no),
+    encounter(no),
+    write('Anda belum memulai game'), nl, !.
+
 d :-
+    started(yes),
     encounter(no),
     player(X, Y),
     X2 is X - 1,
@@ -229,12 +254,19 @@ d :-
     check_lock(X2,Y2), !.
 
 d :-
+    started(yes),
     encounter(no),
     write('Anda tertabrak'), nl, !.
 
 d :-
+    started(yes),
     encounter(yes),
     write('Anda sedang dalam battle'), nl.
+
+d :-
+    started(no),
+    encounter(no),
+    write('Anda belum memulai game'), nl, !.
 
 /*--------------------------------------------------------------------------*/
 
@@ -242,9 +274,9 @@ d :-
 /* playerData([], [], [], [], []).
 playerData([A|V], [B|W], [C,X], [D,Y], [E,Z]) :- */
 
-playerData(15, 10, 20).
-playerLVL(1, 0).
-playerGold(0).
+%playerData(15, 10, 20).
+%playerLVL(1, 0).
+%playerGold(0).
 
 printJob :-
     job(swordsman),!,
@@ -271,12 +303,13 @@ status :-
 
 /*--------------------------------------------------------------------------*/
 /* Enemy Status */
-:- dynamic(slime/3).
-:- dynamic(wolf/3).
-:- dynamic(goblin/3).
-slime(1, 1, 30).
-wolf(5, 5, 30).
-goblin(10, 5, 40).
+:- dynamic(slime/4).
+:- dynamic(wolf/4).
+:- dynamic(goblin/4).
+% enemy(LVL, ATT, DEF, HP)
+slime(1, 15, 0, 27). %kalo gini damagenya gabisa ngedamage player
+wolf(1, 16, 4, 25).
+goblin(1, 18, 3, 33).
 /* Enemy Encounter */
 encounter(no).
 
@@ -288,35 +321,58 @@ start_encounter :-
 end_encounter :-
     encounter(yes),
     retract(encounter(yes)),
-    asserta(encounter(no)).
+    asserta(encounter(no)),
+    retract(special_counter(_)),
+    asserta(special_counter(0)),
+    ((retract(battle_slime(_,_,_))); (retract(battle_wolf(_,_,_))); (retract(battle_goblin(_,_,_)))).
     /* tambahin retract special_counter */
+    /* CEK */
+
+end_battle :-
+    encounter(yes),
+    retract(encounter(yes)),
+    asserta(encounter(no)),
+    retract(special_counter(_)),
+    asserta(special_counter(0)).
 
 encounter_chance(X) :-
-    between(1, 10, X),
+    between(1, 20, X),
     start_encounter,
     write('Anda bertemu dengan slime'), nl,
-    asserta(encounter_slime(yes)),
     battle_menu,
-    slime(Attack, Defense, HP),
-    asserta(battle_slime(Attack, Defense, HP)).
+    slime(_, Attack, Defense, HP),
+    playerData(LVL, _, _, _, _, _, _),
+    NewAttack is Attack + (LVL * 1),
+    NewDefense is Defense + (LVL * 1),
+    NewHP is HP + (LVL * 3),
+    asserta(battle_slime(NewAttack, NewDefense, NewHP)),
+    status_enemy, !.
 
 encounter_chance(X) :-
-    between(11, 15, X),
+    between(21, 30, X),
     start_encounter,
     write('Anda bertemu dengan wolf'), nl,
     battle_menu,
-    asserta(encounter_wolf(yes)),
-    wolf(Attack, Defense, HP),
-    asserta(battle_wolf(Attack, Defense, HP)).
+    wolf(_, Attack, Defense, HP),
+    playerData(LVL, _, _, _, _, _, _),
+    NewAttack is Attack + (LVL * 2),
+    NewDefense is Defense + (LVL * 1),
+    NewHP is HP + (LVL * 5),
+    asserta(battle_wolf(NewAttack, NewDefense, NewHP)),
+    status_enemy, !.
 
 encounter_chance(X) :-
-    between(16, 20, X),
+    between(31, 40, X),
     start_encounter,
     write('Anda bertemu dengan goblin'), nl,
     battle_menu,
-    asserta(encounter_goblin(yes)),
-    goblin(Attack, Defense, HP),
-    asserta(battle_goblin(Attack, Defense, HP)).
+    goblin(_, Attack, Defense, HP),
+    playerData(LVL, _, _, _, _, _, _),
+    NewAttack is Attack + (LVL * 2),
+    NewDefense is Defense + (LVL * 2),
+    NewHP is HP + (LVL * 7),
+    asserta(battle_goblin(NewAttack, NewDefense, NewHP)),
+    status_enemy, !.
 
 encounter_chance(101) :-
     start_encounter,
@@ -345,15 +401,58 @@ battle_menu :-
     write('Apa yang Anda akan lakukan?'), nl,
     write('Attack?'), nl,
     write('Use Potion?'), nl,
-    write('Run?'), nl.
+    write('Run?'), nl, !.
+/*
+status_enemy :-
+    battle_slime(_, _, HP), !,
+    format('Level  : ~w', [Lvl]), nl,
+    format('Attack : ~w', [Att]), nl,
+    format('Defense: ~w', [Def]), nl,
+    format('HP     : ~w/~w', [HP, HPCap]), nl, !. */
+
+status_enemy :-
+    battle_slime(Att, Def, HP), !,
+    playerData(Lvl, _, _, _, _, _, _),
+    format('Level  : ~w', [Lvl]), nl,
+    format('Attack : ~w', [Att]), nl,
+    format('Defense: ~w', [Def]), nl,
+    format('HP     : ~w', [HP]), nl, !.
+
+status_enemy :-
+    battle_wolf(Att, Def, HP), !,
+    playerData(Lvl, _, _, _, _, _, _),
+    format('Level  : ~w', [Lvl]), nl,
+    format('Attack : ~w', [Att]), nl,
+    format('Defense: ~w', [Def]), nl,
+    format('HP     : ~w', [HP]), nl, !.
+
+status_enemy :-
+    battle_goblin(Att, Def, HP), !,
+    playerData(Lvl, _, _, _, _, _, _),
+    format('Level  : ~w', [Lvl]), nl,
+    format('Attack : ~w', [Att]), nl,
+    format('Defense: ~w', [Def]), nl,
+    format('HP     : ~w', [HP]), nl, !.
+
+status_enemy :-
+    started(no),
+    write('Anda belum mulai game'), nl, !.
+
+status_enemy :-
+    started(yes),
+    encounter(no),
+    write('Anda tidak sedang dalam battle'), nl, !.
 
 /*--------------------------------------------------------------------------*/
 /* TEST*/
-player(10, 10, 40). %Swordsman
+:- dynamic(special_counter/1).
+%player(10, 10, 40). %Swordsman
 special_counter(0).
 :- dynamic(battle_goblin/3).
 :- dynamic(battle_slime/3).
 :- dynamic(battle_wolf/3).
+:- dynamic(exp/1).
+exp(50). %exp untuk level up
 /* Battle Mechanism */
 run :-
     encounter(yes),
@@ -366,7 +465,8 @@ run :-
 
 run_success(X) :-
     X > 4,
-    write('Run gagal, turn diberikan ke musuh'), nl.
+    write('Run gagal, turn diberikan ke musuh'), nl,
+    ((slime_attack);(wolf_attack);(slime_attack)).
 
 run_success(X) :-
     between(1, 4, X),
@@ -374,98 +474,208 @@ run_success(X) :-
     end_encounter.
 
 /* Ganti player() dengan fakta yang baru */
+/* Tambah ATTACK dari enemy */
 /* Attacking Slime */
+/*playerData(Level,HP,MaxHP,Att,Def,Exp,Gold)*/
 attack :-
     encounter(yes),
     battle_slime(Attack, Defense, HP), !,
-    player(AttackP, _, _),
+    playerData(A, B, C, AttackP, D, E, F),
+    AttDealt is AttackP - Defense,
     NewHP is HP - AttackP + Defense,
-    NewAttack is Attack,
-    NewDefense is Defense,
+    format('You dealt ~w damage to the Slime', [AttDealt]), nl,
     retract(battle_slime(_, _, _)),
-    asserta(battle_slime(NewAttack, NewDefense, NewHP)),
-    check_death_slime.
-    /*newHP <= 0,
-    write('Slime telah mati.'), nl,
-    retract(battle_slime(_,_,_)),
-    end_encounter.*/
+    asserta(battle_slime(Attack, Defense, NewHP)),
+    check_death_slime,
+    slime_attack,
+    special_counter(Count),
+    0 =\= mod(Count, 3), !,
+    special_increment.
     
 /* Attacking Wolf */
 attack :-
     encounter(yes),
     battle_wolf(Attack, Defense, HP), !,
-    player(AttackP, _, _),
+    playerData(A, B, C, AttackP, D, E, F),
+    AttDealt is AttackP - Defense,
     NewHP is HP - AttackP + Defense,
+    format('You dealt ~w damage to the Wolf', [AttDealt]), nl,
     retract(battle_wolf(_, _, _)),
     asserta(battle_wolf(Attack, Defense, NewHP)),
-    check_death_wolf.
-    /*newHP <= 0,
-    write('Wolf telah mati.'), nl,
-    retract(battle_wolf(_,_,_)),
-    end_encounter.*/
+    check_death_wolf,
+    wolf_attack,
+    special_counter(Count),
+    0 =\= mod(Count, 3), !,
+    special_increment.
 
 /* Attacking Goblin */
 attack :-
     encounter(yes),
     battle_goblin(Attack, Defense, HP), !,
-    player(AttackP, _, _),
+    playerData(A, B, C, AttackP, D, E, F),
+    AttDealt is AttackP - Defense,
     NewHP is HP - AttackP + Defense,
+    format('You dealt ~w damage to the Goblin', [AttDealt]), nl,
     retract(battle_goblin(_, _, _)),
     asserta(battle_goblin(Attack, Defense, NewHP)),
-    check_death_goblin.
-    /*newHP <= 0,
-    write('Goblin telah mati.'), nl,
-    retract(battle_goblin(_,_,_)),
-    end_encounter.*/
+    check_death_goblin,
+    goblin_attack,
+    special_counter(Count),
+    0 =\= mod(Count, 3), !,
+    special_increment.
 
 /* CEK */
 attack :-
+    started(yes),
     encounter(no),
-    write('Anda tidak sedang di dalam battle'), nl.
+    write('Anda tidak sedang di dalam battle'), nl, !.
+
+attack :-
+    started(no),
+    encounter(no),
+    write('Anda belum memulai game'), nl, !.
+
+check_death_slime :-
+    battle_slime(_, _, X),
+    X > 0, !.
 
 check_death_slime :-
     battle_slime(_, _, X), !,
-    X =< 0, !,
+    X =< 0,
     retract(battle_slime(_, _, _)),
-    /* Insert Player Level Here */
-    /* Insert Player Gold Here */
     /* Inset Quest Counter Here */
-    /* Reset Special Attack? */
-    end_encounter,
+    end_battle, %Special Attack di reset saat end_encounter
     write('Slime defeated, great job!'), nl,
-    write('You got 15 exp'), nl,
-    write('You got 10 gold'), nl.
+    add_gold(10),
+    add_exp(15), !, fail. %latest updating
+
+check_death_wolf :-
+    battle_wolf(_, _, X),
+    X > 0, !.
 
 check_death_wolf :-
     battle_wolf(_, _, X), !,
     X =< 0, !,
     retract(battle_wolf(_, _, _)),
-    /* Insert Player Level Here */
-    /* Insert Player Gold Here */
     /* Inset Quest Counter Here */
-    /* Reset Special Attack? */
-    end_encounter,
+    end_battle,
     write('Wolf defeated, great job!'), nl,
-    write('You got 20 exp'), nl,
-    write('You got 50 gold'), nl.
+    add_gold(50),
+    add_exp(20), !, fail.
+
+check_death_goblin :-
+    battle_goblin(_, _, X),
+    X > 0, !.
 
 check_death_goblin :-
     battle_goblin(_, _, X), !,
     X =< 0, !,
     retract(battle_goblin(_, _, _)),
-    /* Insert Player Level Here */
-    /* Insert Player Gold Here */
     /* Insert Quest Counter Here */
-    /* Reset Special Attack? */
-    end_encounter,
+    end_battle,
     write('Goblin defeated, great job!'), nl,
-    write('You got 30 exp'), nl,
-    write('You got 100 gold'), nl.
+    add_gold(100),
+    add_exp(30), !, fail.
+
+add_gold(X) :-
+    format('You got ~w gold coins', [X]), nl,
+    retract(playerData(LVL, HP, MAXHP, Att, Def, Exp, Gold)),
+    NewGold is Gold + X,
+    asserta(playerData(LVL, HP, MAXHP, Att, Def, Exp, NewGold)).
+
+/* Leveling System */
+
+add_exp(X) :-
+    format('You got ~w Experience Points', [X]), nl,
+    playerData(LVL, HP, MaxHP, Att, Def, EXP, Gold),
+    exp(MaxEXP),
+    NewEXP is EXP + X,
+    levelup_check(NewEXP, MaxEXP), !,
+    %Jika levelup_check berhasil akan levelup
+    level_up(NewEXP, MaxEXP).
+
+levelup_check(Exp, ExpCap) :-
+    Exp >= ExpCap, !.
+
+levelup_check(Exp, ExpCap) :-
+    Exp < ExpCap,
+    playerData(LVL, HP, MaxHP, Att, Def, EXP, Gold),
+    retract(playerData(_, _, _, _, _, _, _)),
+    asserta(playerData(LVL, HP, MaxHP, Att, Def, Exp, Gold)), fail.
+
+level_up(EXP, EXPCap) :- %Basis Level Up
+    EXP < EXPCap, !.
+
+level_up(EXP, EXPCap) :- %input EXP sudah ditambahkan dengan Exp Player awal
+    playerData(LVL, HP, MAXHP, Att, Def, Exp, Gold),
+    NewEXP is EXP - EXPCap,
+    NewEXP >= 0, !,
+    NewEXPCap is EXPCap + 10,
+    retract(playerData(_, _, _, _, _, _, _)),
+    retract(exp(_)),
+    NewLVL is LVL + 1,
+    NewHP is HP + 10,
+    NewMaxHP is MAXHP + 10,
+    NewAtt is Att + 2,
+    NewDef is Def + 2,
+    asserta(playerData(NewLVL, NewHP, NewMaxHP, NewAtt, NewDef, NewEXP, Gold)),
+    asserta(exp(NewEXPCap)),
+    level_up(NewEXP, NewEXPCap), !. %Rekursi Level Up
+
 
 /* Slime Attack */
+/*playerData(Level,HP,MaxHP,Att,Def,Exp,Gold)*/
+
 slime_attack :-
-    battle_slime(Att, _, _).
-    /* Insert Get Player Data Health */
+    battle_slime(Att, _, _),
+    playerData(LVL, HP, MHP, AttP, Def, Exp, Gold),
+    AttDealt is Att - Def,
+    AttDealt > 0, !,
+    format('You take ~w damage from the Slime', [AttDealt]), nl,
+    NewHP is HP - AttDealt,
+    retract(playerData(_, _, _, _, _, _, _)),
+    asserta(playerData(LVL, NewHP, MHP, AttP, Def, Exp, Gold)).
+
+slime_attack :-
+    battle_slime(Att, _, _),
+    playerData(LVL, HP, MHP, AttP, Def, Exp, Gold),
+    AttDealt is Att - Def,
+    AttDealt =< 0, !,
+    write('You take no damage from the Slime'), nl.
+
+wolf_attack :-
+    battle_wolf(Att, _, _),
+    playerData(LVL, HP, MHP, AttP, Def, Exp, Gold),
+    AttDealt is Att - Def,
+    AttDealt > 0, !,
+    format('You take ~w damage from the Wolf', [AttDealt]), nl,
+    NewHP is HP - AttDealt,
+    retract(playerData(_, _, _, _, _, _, _)),
+    asserta(playerData(LVL, NewHP, MHP, AttP, Def, Exp, Gold)).
+
+wolf_attack :-
+    battle_wolf(Att, _, _),
+    playerData(LVL, HP, MHP, AttP, Def, Exp, Gold),
+    AttDealt is Att - Def,
+    AttDealt =< 0, !,
+    write('You take no damage from the Wolf'), nl.
+
+goblin_attack :-
+    battle_goblin(Att, _, _),
+    playerData(LVL, HP, MHP, AttP, Def, Exp, Gold),
+    AttDealt is Att - Def,
+    AttDealt > 0, !,
+    format('You take ~w damage from the Goblin', [AttDealt]), nl,
+    NewHP is HP - AttDealt,
+    retract(playerData(_, _, _, _, _, _, _)),
+    asserta(playerData(LVL, NewHP, MHP, AttP, Def, Exp, Gold)).
+
+goblin_attack :-
+    battle_goblin(Att, _, _),
+    playerData(LVL, HP, MHP, AttP, Def, Exp, Gold),
+    AttDealt is Att - Def,
+    AttDealt =< 0, !,
+    write('You take no damage from the Goblin'), nl.
 
 /* Wolf Attack */
 wolf_attack :-
@@ -478,10 +688,94 @@ goblin_attack :-
     /* Insert Get Player Data Health */
     /* Calculate Damage Taken */
 
+/* Add Enemy Attacking to Special Attack */
+%playerData(_, _, _, AttackP, _, _, _),
+/* Special Attacking Slime */
 specialAttack :-
     encounter(yes),
+    playerData(A, B, C, AttP, D, E, F),
+    battle_slime(Att, Def, HP), !,
     special_counter(Count),
-    0 =:= mod(Count, 3), !.
+    check_special(Count), !,
+    retract(battle_slime(_, _, _)),
+    NewAttP is AttP * 3,
+    AttDealt is NewAttP - Def,
+    NewHP is HP - NewAttP + Def, 
+    asserta(battle_slime(Att, Def, NewHP)),
+    format('You dealt ~w damage to the Slime', [AttDealt]), nl,
+    special_increment,
+    check_death_slime,
+    slime_attack.
+
+/* Special Attacking Wolf */
+specialAttack :-
+    encounter(yes),
+    playerData(A, B, C, AttP, D, E, F),
+    battle_wolf(Att, Def, HP), !,
+    special_counter(Count),
+    check_special(Count), !,
+    retract(battle_wolf(_, _, _)),
+    NewAttP is AttP * 3,
+    AttDealt is NewAttP - Def,
+    NewHP is HP - NewAttP + Def,
+    format('You dealt ~w damage to the Wolf', [AttDealt]), nl,
+    asserta(battle_wolf(Att, Def, NewHP)),
+    special_increment,
+    check_death_wolf,
+    wolf_attack.
+
+/* Special Attacking Goblin */
+specialAttack :-
+    encounter(yes),
+    playerData(A, B, C, AttP, D, E, F),
+    battle_goblin(Att, Def, HP), !,
+    special_counter(Count),
+    check_special(Count), !,
+    retract(battle_goblin(_, _, _)),
+    NewAttP is AttP * 3,
+    AttDealt is NewAttP - Def,
+    NewHP is HP - NewAttP + Def,
+    format('You dealt ~w damage to the Goblin', [AttDealt]), nl,
+    asserta(battle_goblin(Att, Def, NewHP)),
+    special_increment,
+    check_death_goblin,
+    goblin_attack.
+
+specialAttack :-
+    encounter(yes),
+    player(AttP, _, _),
+    special_counter(Count),
+    X is mod(Count, 3),
+    0 =\= mod(Count, 3), !,
+    write('You have to wait ~w more turns to use special attack', [X]), nl.
+
+specialAttack :-
+    started(yes),
+    encounter(no),
+    write('Anda tidak sedang di dalam battle'), nl, !.
+
+specialAttack :-
+    started(no),
+    encounter(no),
+    write('Anda belum memulai game'), nl, !.
+
+check_special(X) :-
+    0 =:= mod(X, 3), !.
+
+check_special(X) :-
+    Y is mod(X, 3),
+    Z is 3 - Y,
+    format('You have to wait ~w turns to use special attack', [Z]), !, fail.
+    % cut and fail %
+
+
+/* tentuin begini apa engga pakenya ngurangin hp enemy */
+
+special_increment :-
+    special_counter(Count),
+    retract(special_counter(_)),
+    NewCount is Count + 1,
+    asserta(special_counter(NewCount)).
     
 
 
@@ -570,7 +864,7 @@ insertOne(Item) :-
         ArrayPindahan   :   Array yang menampung popped element dari ArrInvChecking
         ResultAkhir     :   Array hasil insRekursif
 */
-    
+
 rekurensFrontPopBack(ArrInvChecking,Front,PoppedArr,Nama1ItemInv) :-
     ArrInvChecking \== [],
     front(ArrInvChecking,Front),
