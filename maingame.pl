@@ -1,6 +1,7 @@
 :- dynamic(player/2).
 :- dynamic(encounter/1).
 :- dynamic(started/1).
+:- dynamic(inventory/2).
 
 tiles(4,4).
 tiles(5,4).
@@ -48,9 +49,11 @@ start :-
     asserta(playerData(1,60,60,15,3,0,0)),
     write('Anda memilih class Sorcerer, good luck boi'), 
     nl
-    )), 
+    )),
+    asserta(inventory([],0)),
     retract(started(no)),
     asserta(started(yes)),!,
+    
     map.
 
 start :-
@@ -235,8 +238,9 @@ d :-
 
 /*--------------------------------------------------------------------------*/
 
-/* Status Player 
-playerData(Level, HP, MaxHP, Att, Def, Exp, Gold) :- */
+/* Status Player */
+/* playerData([], [], [], [], []).
+playerData([A|V], [B|W], [C,X], [D,Y], [E,Z]) :- */
 
 playerData(15, 10, 20).
 playerLVL(1, 0).
@@ -284,11 +288,8 @@ start_encounter :-
 end_encounter :-
     encounter(yes),
     retract(encounter(yes)),
-    asserta(encounter(no)),
-    retract(special_counter(_)),
-    asserta(special_counter(0)).
+    asserta(encounter(no)).
     /* tambahin retract special_counter */
-    /* CEK */
 
 encounter_chance(X) :-
     between(1, 10, X),
@@ -348,7 +349,6 @@ battle_menu :-
 
 /*--------------------------------------------------------------------------*/
 /* TEST*/
-:- dynamic(special_counter/1).
 player(10, 10, 40). %Swordsman
 special_counter(0).
 :- dynamic(battle_goblin/3).
@@ -374,49 +374,49 @@ run_success(X) :-
     end_encounter.
 
 /* Ganti player() dengan fakta yang baru */
-/* Tambah ATTACK dari enemy */
 /* Attacking Slime */
 attack :-
     encounter(yes),
     battle_slime(Attack, Defense, HP), !,
     player(AttackP, _, _),
-    AttDealt is AttackP - Defense,
     NewHP is HP - AttackP + Defense,
-    format('You dealt ~w damage to the Slime', [AttDealt]), nl,
+    NewAttack is Attack,
+    NewDefense is Defense,
     retract(battle_slime(_, _, _)),
-    asserta(battle_slime(Attack, Defense, NewHP)),
-    check_death_slime,
-    special_counter(Count),
-    0 =\= mod(Count, 3), !,
-    special_increment.
+    asserta(battle_slime(NewAttack, NewDefense, NewHP)),
+    check_death_slime.
+    /*newHP <= 0,
+    write('Slime telah mati.'), nl,
+    retract(battle_slime(_,_,_)),
+    end_encounter.*/
     
 /* Attacking Wolf */
 attack :-
     encounter(yes),
     battle_wolf(Attack, Defense, HP), !,
     player(AttackP, _, _),
-    AttDealt is AttackP - Defense,
     NewHP is HP - AttackP + Defense,
-    format('You dealt ~w damage to the Wolf', [AttDealt]), nl,
     retract(battle_wolf(_, _, _)),
     asserta(battle_wolf(Attack, Defense, NewHP)),
-    check_death_wolf,
-    0 =\= mod(Count, 3), !,
-    special_increment.
+    check_death_wolf.
+    /*newHP <= 0,
+    write('Wolf telah mati.'), nl,
+    retract(battle_wolf(_,_,_)),
+    end_encounter.*/
 
 /* Attacking Goblin */
 attack :-
     encounter(yes),
     battle_goblin(Attack, Defense, HP), !,
     player(AttackP, _, _),
-    AttDealt is AttackP - Defense,
     NewHP is HP - AttackP + Defense,
-    format('You dealt ~w damage to the Goblin', [AttDealt]), nl,
     retract(battle_goblin(_, _, _)),
     asserta(battle_goblin(Attack, Defense, NewHP)),
-    check_death_goblin,
-    0 =\= mod(Count, 3), !,
-    special_increment.
+    check_death_goblin.
+    /*newHP <= 0,
+    write('Goblin telah mati.'), nl,
+    retract(battle_goblin(_,_,_)),
+    end_encounter.*/
 
 /* CEK */
 attack :-
@@ -478,80 +478,11 @@ goblin_attack :-
     /* Insert Get Player Data Health */
     /* Calculate Damage Taken */
 
-/* Add Enemy Attacking to Special Attack */
-
-/* Special Attacking Slime */
 specialAttack :-
     encounter(yes),
-    player(AttP, _, _),
-    battle_slime(Att, Def, HP), !,
     special_counter(Count),
-    check_special(Count), !,
-    retract(battle_slime(_, _, _)),
-    NewAttP is AttP * 3,
-    AttDealt is NewAttP - Def,
-    NewHP is HP - NewAttP + Def, 
-    asserta(battle_slime(Att, Def, NewHP)),
-    format('You dealt ~w damage to the Slime', [AttDealt]), nl,
-    special_increment,
-    check_death_slime.
-
-/* Special Attacking Wolf */
-specialAttack :-
-    encounter(yes),
-    player(AttP, _, _),
-    battle_wolf(Att, Def, HP), !,
-    special_counter(Count),
-    check_special(Count), !,
-    retract(battle_wolf(_, _, _)),
-    NewAttP is AttP * 3,
-    AttDealt is NewAttP - Def,
-    NewHP is HP - NewAttP + Def,
-    format('You dealt ~w damage to the Wolf', [AttDealt]), nl,
-    asserta(battle_wolf(Att, Def, NewHP)),
-    special_increment,
-    check_death_wolf.
-
-/* Special Attacking Goblin */
-specialAttack :-
-    encounter(yes),
-    player(AttP, _, _),
-    battle_goblin(Att, Def, HP), !,
-    special_counter(Count),
-    check_special(Count), !,
-    retract(battle_goblin(_, _, _)),
-    NewAttP is AttP * 3,
-    AttDealt is NewAttP - Def,
-    NewHP is HP - NewAttP + Def,
-    format('You dealt ~w damage to the Goblin', [AttDealt]), nl,
-    asserta(battle_goblin(Att, Def, NewHP)),
-    special_increment,
-    check_death_goblin.
-
-specialAttack :-
-    encounter(yes),
-    player(AttP, _, _),
-    special_counter(Count),
-    X is mod(Count, 3),
-    0 =\= mod(Count, 3), !,
-    write('You have to wait ~w more turns to use special attack', [X]), nl.
-
-check_special(X) :-
-    0 =:= mod(X, 3), !.
-
-check_special(X) :-
-    Y is mod(X, 3),
-    Z is 3 - Y,
-    format('You have to wait ~w turns to use special attack', [Z]), fail.
-
-
-/* tentuin begini apa engga pakenya ngurangin hp enemy */
-
-special_increment :-
-    special_counter(Count),
-    retract(special_counter(_)),
-    NewCount is Count + 1,
-    asserta(special_counter(NewCount)).
+    0 =:= mod(Count, 3), !.
+    
 
 
 /*--------------------------------------------------------------------------*/
@@ -563,3 +494,203 @@ special_increment :-
 /* Quest */
 
 /*--------------------------------------------------------------------------*/
+
+/* Fungsi dasar stack */
+
+front(Queue,Result) :-
+    [H|_] = Queue,
+    Result = H.
+ 
+pop(Queue,Result) :-
+    [_|T] = Queue,
+    Result = T.
+
+push(Element,Queue,Result) :-
+    Result = [Element|Queue].
+
+back(Queue,Result) :- 
+    [H|T] = Queue, 
+    T == [],
+    Result = H.
+back(Queue,Result) :-
+    [_|T] = Queue,
+    T \== [],
+    pop(Queue,A),
+    back(A,Result).
+
+/*Insert into inventory*/
+
+/*insertPlenty untuk memasukkan item berjumlah >= 1 ke inventori dengan cara melakukan insertOne sebanyak jumlah item */
+insertPlenty(1,Item) :-
+    insertOne(Item).
+insertPlenty(JumlahItem,Item) :-
+    JumlahItem>1,
+    insertOne(Item),
+    Decr is JumlahItem-1,
+    insertPlenty(Decr,Item).
+
+/*insertOne untuk memasukkan 1 item ke inventory*/
+insertOne(Item) :-
+    inventory(Arr,Capacity),
+    Capacity < 15,
+    ArrInvChecking = Arr,
+    insRekursif(Item,ArrInvChecking,[],ResultAkhir),
+    TotalItemInventory is Capacity + 1,
+    retract(inventory(Arr,Capacity)),
+    asserta(inventory(ResultAkhir,TotalItemInventory)).
+
+/* insRekursif, fungsi bantu insertOne untuk memasukkan item ke Inventory; 
+    Cara kerja:
+    1.      Ambil list Front dari ArrInvChecking, {format Front : [JumlahItem, NamaItem]}
+
+    2.      Keluarkan Front dari ArrInvChecking 
+
+    3.1.    Apabila elemen terakhir dari Front {NamaItem}, sama dengan nama item yang mau dimasukkan ke inventory, JumlahItem di Front 
+            diincrement, ArrayPindahan direverse (agar urut), kemudian Front di push ke ArrayPindahan lalu ArrayPindahan di-append atau 
+            konkat dengan ArrInvChecking kemudian hasilnya dimasukkan ke ResultAkhir
+            
+            ResultAkhir kemudian menggantikan array inventory. 
+            insRekursif berakhir. 
+
+            Jika tidak, Push Front ke ArrayPindahan hingga ditemukan nama item di list dalam array inventory yang sama dengan nama item
+            yang mau dimasukkan atau sampai ArrayInvChecking kosong.
+
+    3,2     Apabila tidak ada item di inventory yang memiliki nama yang sama dengan item yang mau dimasukkan, Item di masukkan
+            ke sebuah list bertipe elemen array inventory {[JumlahItem, NamaItem]}, lalu list tersebut di push ke ArrayPindahan yang telah 
+            direverse terlebih dahulu (ArrayPindahan = array inventory). Data ArrayPindahan kemudian dimasukkan ke ResultAkhir 
+
+    4.      ResultAkhir kemudian menggantikan Arr pada fakta inventory(Arr,Capacity). 
+            insRekursif berakhir. 
+
+    # Note  : Capacity diupdate setelah insRekursif berakhir.
+
+    Format: (Item,ArrInvChecking,ArrayPindahan,ResultAkhir) 
+        Item            :   Nama Item
+        ArrInvChecking  :   Data array dari inventory
+        ArrayPindahan   :   Array yang menampung popped element dari ArrInvChecking
+        ResultAkhir     :   Array hasil insRekursif
+*/
+    
+%Basis
+insRekursif(Item,[],ArrayPindahan,ResultAkhir) :-
+    reverse(ArrayPindahan,RevArrayPindahan),
+    push([1,Item],RevArrayPindahan,ResultAkhir),!.
+
+%Rekurens
+insRekursif(Item,ArrInvChecking,ArrayPindahan,ResultAkhir) :-
+    ArrInvChecking \== [],
+    front(ArrInvChecking,Front),
+    pop(ArrInvChecking,PoppedArr),
+    back(Front,Nama1ItemInv),
+    Item \== Nama1ItemInv,!,
+    push(Front,ArrayPindahan,ArrayPindahanT),
+    insRekursif(Item,PoppedArr,ArrayPindahanT,ResultAkhir).
+
+insRekursif(Item,ArrInvChecking,ArrayPindahan,ResultAkhir) :-
+    ArrInvChecking \== [],
+    front(ArrInvChecking,Front),
+    pop(ArrInvChecking,PoppedArr),
+    back(Front,Nama1ItemInv),
+    Item == Nama1ItemInv,!,
+    front(Front,Jumlah1ItemInv),
+    PlusOneItem is Jumlah1ItemInv + 1,
+    PlusOneArr1Item = [PlusOneItem,Nama1ItemInv],
+    reverse(ArrayPindahan,RevArrayPindahan),
+    push(PlusOneArr1Item,RevArrayPindahan,Result),
+    append(Result,PoppedArr,ResultAkhir).
+
+
+/*Delete item from inventory*/
+
+/*deletePlenty untuk memasukkan item berjumlah >= 1 ke inventori dengan cara melakukan deleteOne sebanyak jumlah item */
+deletePlenty(1,Item) :-
+    deleteOne(Item),!.
+deletePlenty(JumlahItem,Item) :-
+    JumlahItem > 1,
+    inventory(Arr,Capacity),
+    deleteOne(Item),
+    Decr is JumlahItem-1,
+    deletePlenty(Decr,Item).
+
+/*deleteOne untuk memasukkan 1 item ke inventory*/
+deleteOne(Item) :-
+    inventory(Arr,Capacity),
+    Capacity > 0,
+    ArrInvChecking = Arr,
+    delRekursif(Item,ArrInvChecking,[],ResultAkhir).
+
+
+/* delRekursif, fungsi bantu deleteOne untuk memasukkan item ke Inventory; 
+    Cara kerja:
+    1.      Ambil list Front dari ArrInvChecking, {format Front : [JumlahItem, NamaItem]}
+
+    2.      Keluarkan Front dari ArrInvChecking 
+
+    3.1.    Apabila elemen terakhir dari Front {NamaItem}, sama dengan nama item yang mau dimasukkan ke inventory, JumlahItem di Front 
+            diincrement, ArrayPindahan direverse (agar urut), kemudian Front di push ke ArrayPindahan lalu ArrayPindahan di-append atau 
+            konkat dengan ArrInvChecking kemudian hasilnya dimasukkan ke ResultAkhir
+            
+            ResultAkhir kemudian menggantikan array inventory. 
+            delRekursif berakhir. 
+
+            Jika tidak, Push Front ke ArrayPindahan hingga ditemukan nama item di list dalam array inventory yang sama dengan nama item
+            yang mau dimasukkan atau sampai ArrayInvChecking kosong.
+
+    3,2     Apabila tidak ada item di inventory yang memiliki nama yang sama dengan item yang mau dimasukkan, Item di masukkan
+            ke sebuah list bertipe elemen array inventory {[JumlahItem, NamaItem]}, lalu list tersebut di push ke ArrayPindahan yang telah 
+            direverse terlebih dahulu (ArrayPindahan = array inventory). Data ArrayPindahan kemudian dimasukkan ke ResultAkhir 
+
+    4.      ResultAkhir kemudian menggantikan Arr pada fakta inventory(Arr,Capacity). 
+            delRekursif berakhir. 
+
+    # Note  : Capacity diupdate setelah delRekursif berakhir.
+
+    Format: (Item,ArrInvChecking,ArrayPindahan,ResultAkhir) 
+        Item            :   Nama Item
+        ArrInvChecking  :   Data array dari inventory
+        ArrayPindahan   :   Array yang menampung popped element dari ArrInvChecking
+        ResultAkhir     :   Array hasil delRekursif
+*/
+    
+%Basis
+delRekursif(Item,[],ArrayPindahan,ResultAkhir) :-
+    reverse(ArrayPindahan,ResultAkhir).
+
+%Rekurens
+delRekursif(Item,ArrInvChecking,ArrayPindahan,ResultAkhir) :-
+    ArrInvChecking \== [],
+    front(ArrInvChecking,Front),
+    pop(ArrInvChecking,PoppedArr),
+    back(Front,Nama1ItemInv),
+
+    Item \== Nama1ItemInv,!,
+
+    push(Front,ArrayPindahan,ArrayPindahanT),
+    delRekursif(Item,PoppedArr,ArrayPindahanT,ResultAkhir).
+
+delRekursif(Item,ArrInvChecking,ArrayPindahan,ResultAkhir) :-
+    ArrInvChecking \== [],
+    front(ArrInvChecking,Front),
+    pop(ArrInvChecking,PoppedArr),
+    back(Front,Nama1ItemInv),
+
+    Item == Nama1ItemInv,!,
+
+    front(Front,Jumlah1ItemInv),
+    MinusOneItem is Jumlah1ItemInv-1,
+    ((
+    MinusOneItem > 0,!,
+    MinusOneArr1Item = [MinusOneItem,Nama1ItemInv],
+    reverse(ArrayPindahan,RevArrayPindahan),
+    push(MinusOneArr1Item,RevArrayPindahan,Result),
+    append(Result,PoppedArr,ResultAkhir));
+    (
+    MinusOneItem =< 0,!,
+    reverse(ArrayPindahan,RevArrayPindahan),
+    append(RevArrayPindahan,PoppedArr,ResultAkhir)
+    )),
+    inventory(Arr,Capacity),
+    TotalItemInventory is Capacity - 1,
+    retract(inventory(Arr,Capacity)),
+    asserta(inventory(ResultAkhir,TotalItemInventory)).
+
