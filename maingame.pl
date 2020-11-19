@@ -618,39 +618,6 @@ deleteOne(Item) :-
     Capacity > 0,
     ArrInvChecking = Arr,
     delRekursif(Item,ArrInvChecking,[],ResultAkhir).
-
-
-/* delRekursif, fungsi bantu deleteOne untuk memasukkan item ke Inventory; 
-    Cara kerja:
-    1.      Ambil list Front dari ArrInvChecking, {format Front : [JumlahItem, NamaItem]}
-
-    2.      Keluarkan Front dari ArrInvChecking 
-
-    3.1.    Apabila elemen terakhir dari Front {NamaItem}, sama dengan nama item yang mau dimasukkan ke inventory, JumlahItem di Front 
-            diincrement, ArrayPindahan direverse (agar urut), kemudian Front di push ke ArrayPindahan lalu ArrayPindahan di-append atau 
-            konkat dengan ArrInvChecking kemudian hasilnya dimasukkan ke ResultAkhir
-            
-            ResultAkhir kemudian menggantikan array inventory. 
-            delRekursif berakhir. 
-
-            Jika tidak, Push Front ke ArrayPindahan hingga ditemukan nama item di list dalam array inventory yang sama dengan nama item
-            yang mau dimasukkan atau sampai ArrayInvChecking kosong.
-
-    3,2     Apabila tidak ada item di inventory yang memiliki nama yang sama dengan item yang mau dimasukkan, Item di masukkan
-            ke sebuah list bertipe elemen array inventory {[JumlahItem, NamaItem]}, lalu list tersebut di push ke ArrayPindahan yang telah 
-            direverse terlebih dahulu (ArrayPindahan = array inventory). Data ArrayPindahan kemudian dimasukkan ke ResultAkhir 
-
-    4.      ResultAkhir kemudian menggantikan Arr pada fakta inventory(Arr,Capacity). 
-            delRekursif berakhir. 
-
-    # Note  : Capacity diupdate setelah delRekursif berakhir.
-
-    Format: (Item,ArrInvChecking,ArrayPindahan,ResultAkhir) 
-        Item            :   Nama Item
-        ArrInvChecking  :   Data array dari inventory
-        ArrayPindahan   :   Array yang menampung popped element dari ArrInvChecking
-        ResultAkhir     :   Array hasil delRekursif
-*/
     
 %Basis
 delRekursif(Item,[],ArrayPindahan,ResultAkhir) :-
