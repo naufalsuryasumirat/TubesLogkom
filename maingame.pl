@@ -571,6 +571,12 @@ insertOne(Item) :-
         ResultAkhir     :   Array hasil insRekursif
 */
     
+rekurensFrontPopBack(ArrInvChecking,Front,PoppedArr,Nama1ItemInv) :-
+    ArrInvChecking \== [],
+    front(ArrInvChecking,Front),
+    pop(ArrInvChecking,PoppedArr),
+    back(Front,Nama1ItemInv).
+
 %Basis
 insRekursif(Item,[],ArrayPindahan,ResultAkhir) :-
     reverse(ArrayPindahan,RevArrayPindahan),
@@ -578,19 +584,13 @@ insRekursif(Item,[],ArrayPindahan,ResultAkhir) :-
 
 %Rekurens
 insRekursif(Item,ArrInvChecking,ArrayPindahan,ResultAkhir) :-
-    ArrInvChecking \== [],
-    front(ArrInvChecking,Front),
-    pop(ArrInvChecking,PoppedArr),
-    back(Front,Nama1ItemInv),
+    rekurensFrontPopBack(ArrInvChecking,Front,PoppedArr,Nama1ItemInv),
     Item \== Nama1ItemInv,!,
     push(Front,ArrayPindahan,ArrayPindahanT),
     insRekursif(Item,PoppedArr,ArrayPindahanT,ResultAkhir).
 
 insRekursif(Item,ArrInvChecking,ArrayPindahan,ResultAkhir) :-
-    ArrInvChecking \== [],
-    front(ArrInvChecking,Front),
-    pop(ArrInvChecking,PoppedArr),
-    back(Front,Nama1ItemInv),
+    rekurensFrontPopBack(ArrInvChecking,Front,PoppedArr,Nama1ItemInv),
     Item == Nama1ItemInv,!,
     front(Front,Jumlah1ItemInv),
     PlusOneItem is Jumlah1ItemInv + 1,
@@ -625,10 +625,7 @@ delRekursif(Item,[],ArrayPindahan,ResultAkhir) :-
 
 %Rekurens
 delRekursif(Item,ArrInvChecking,ArrayPindahan,ResultAkhir) :-
-    ArrInvChecking \== [],
-    front(ArrInvChecking,Front),
-    pop(ArrInvChecking,PoppedArr),
-    back(Front,Nama1ItemInv),
+    rekurensFrontPopBack(ArrInvChecking,Front,PoppedArr,Nama1ItemInv),
 
     Item \== Nama1ItemInv,!,
 
@@ -636,10 +633,7 @@ delRekursif(Item,ArrInvChecking,ArrayPindahan,ResultAkhir) :-
     delRekursif(Item,PoppedArr,ArrayPindahanT,ResultAkhir).
 
 delRekursif(Item,ArrInvChecking,ArrayPindahan,ResultAkhir) :-
-    ArrInvChecking \== [],
-    front(ArrInvChecking,Front),
-    pop(ArrInvChecking,PoppedArr),
-    back(Front,Nama1ItemInv),
+    rekurensFrontPopBack(ArrInvChecking,Front,PoppedArr,Nama1ItemInv),
 
     Item == Nama1ItemInv,!,
 
@@ -661,3 +655,23 @@ delRekursif(Item,ArrInvChecking,ArrayPindahan,ResultAkhir) :-
     retract(inventory(Arr,Capacity)),
     asserta(inventory(ResultAkhir,TotalItemInventory)).
 
+/* SEARCH */
+
+search(Item) :-
+    inventory(Arr,Capacity),
+    ArrInvChecking = Arr,
+    searchRekursif(Item,ArrInvChecking,[]).
+
+searchRekursif(Item,[],ArrayPindahan) :-
+    1 == 0.
+
+searchRekursif(Item,ArrInvChecking,ArrayPindahan) :- 
+    rekurensFrontPopBack(ArrInvChecking,Front,PoppedArr,Nama1ItemInv),
+    Item \== Nama1ItemInv,!,
+    push(Front,ArrayPindahan,ArrayPindahanT),
+    searchRekursif(Item,PoppedArr,ArrayPindahanT).
+
+searchRekursif(Item,ArrInvChecking,ArrayPindahan) :-
+    rekurensFrontPopBack(ArrInvChecking,Front,PoppedArr,Nama1ItemInv),
+    Item == Nama1ItemInv,!,
+    1 == 1.
