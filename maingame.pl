@@ -177,7 +177,7 @@ w :-
 w :-
     started(yes),
     encounter(yes),
-    write('Anda sedang dalam battle'), nl.
+    write('Anda sedang dalam battle'), nl, !.
 
 w :-
     started(no),
@@ -205,7 +205,7 @@ a :-
 a :-
     started(yes),
     encounter(yes),
-    write('Anda sedang dalam battle'), nl.
+    write('Anda sedang dalam battle'), nl, !.
 
 a :-
     started(no),
@@ -233,7 +233,7 @@ s :-
 s :-
     started(yes),
     encounter(yes),
-    write('Anda sedang dalam battle'), nl.
+    write('Anda sedang dalam battle'), nl, !.
 
 s :-
     started(no),
@@ -261,7 +261,7 @@ d :-
 d :-
     started(yes),
     encounter(yes),
-    write('Anda sedang dalam battle'), nl.
+    write('Anda sedang dalam battle'), nl, !.
 
 d :-
     started(no),
@@ -324,7 +324,7 @@ end_encounter :-
     asserta(encounter(no)),
     retract(special_counter(_)),
     asserta(special_counter(0)),
-    ((retract(battle_slime(_,_,_))); (retract(battle_wolf(_,_,_))); (retract(battle_goblin(_,_,_)))).
+    ((retract(battle_slime(_,_,_))); (retract(battle_wolf(_,_,_))); (retract(battle_goblin(_,_,_))); (retract(battle_metalslime(_)))).
     /* tambahin retract special_counter */
     /* CEK */
 
@@ -373,6 +373,20 @@ encounter_chance(X) :-
     NewHP is HP + (LVL * 7),
     asserta(battle_goblin(NewAttack, NewDefense, NewHP)),
     status_enemy, !.
+
+encounter_chance(69) :-
+    start_encounter,
+    write('Anda bertemu dengan metal slime'), nl,
+    battle_menu,
+    random(75, 121, HP),
+    asserta(battle_metalslime(HP)),
+    status_enemy, !.
+    /*  Lvl : ???
+        Att : ???
+        Def : ???
+        HP  : ??? 
+        gives ton of exp (rekursi lvl up)
+        add enemy run ???*/
 
 encounter_chance(101) :-
     start_encounter,
@@ -435,6 +449,13 @@ status_enemy :-
     format('HP     : ~w', [HP]), nl, !.
 
 status_enemy :-
+    battle_metalslime(HP), !,
+    write('Level  : ???'), nl,
+    write('Attack : ???'), nl,
+    write('Defense: ???'), nl,
+    format('HP     : ~w', [HP]), nl, !.
+
+status_enemy :-
     started(no),
     write('Anda belum mulai game'), nl, !.
 
@@ -466,7 +487,7 @@ run :-
 run_success(X) :-
     X > 4,
     write('Run gagal, turn diberikan ke musuh'), nl,
-    ((slime_attack);(wolf_attack);(slime_attack)).
+    ((slime_attack);(wolf_attack);(slime_attack);(metalslime_attack)).
 
 run_success(X) :-
     between(1, 4, X),
@@ -524,6 +545,21 @@ attack :-
     0 =\= mod(Count, 3), !,
     special_increment.
 
+/* Attacking Metal Slime */
+attack :-
+    encounter(yes),
+    battle_metalslime(HP), !,
+    NewHP is HP - 1,
+    write('You dealt 1 damage to the Metal Slime'), nl,
+    retract(battle_metalslime(_)),
+    asserta(battle_metalslime(NewHP)),
+    check_death_metalslime,
+    metalslime_attack,
+    special_counter(Count),
+    0 =\= mod(Count, 3), !,
+    special_increment.
+
+
 /* CEK */
 attack :-
     started(yes),
@@ -577,6 +613,22 @@ check_death_goblin :-
     add_gold(100),
     add_exp(30), !, fail.
 
+check_death_metalslime :-
+    battle_metalslime(HP),
+    HP > 0, !.
+
+check_death_metalslime :-
+    battle_metalslime(HP), !,
+    HP =< 0, !,
+    retract(battle_metalslime(_)),
+    /* No Quest Counter Here */
+    end_battle,
+    write('Metal Slime defeated, great job!'), nl,
+    playerData(LVL, _, _, _, _, _, _),
+    EXPGiven is LVL * 150,
+    add_gold(100),
+    add_exp(EXPGiven).
+
 add_gold(X) :-
     format('You got ~w gold coins', [X]), nl,
     retract(playerData(LVL, HP, MAXHP, Att, Def, Exp, Gold)),
@@ -617,7 +669,7 @@ level_up(EXP, EXPCap) :- %input EXP sudah ditambahkan dengan Exp Player awal
     NewHP is HP + 10,
     NewMaxHP is MAXHP + 10,
     NewAtt is Att + 2,
-    NewDef is Def + 2,
+    NewDef is Def + 1,
     asserta(playerData(NewLVL, NewHP, NewMaxHP, NewAtt, NewDef, NewEXP, Gold)),
     asserta(exp(NewEXPCap)),
     level_up(NewEXP, NewEXPCap), !. %Rekursi Level Up
@@ -634,7 +686,8 @@ slime_attack :-
     format('You take ~w damage from the Slime', [AttDealt]), nl,
     NewHP is HP - AttDealt,
     retract(playerData(_, _, _, _, _, _, _)),
-    asserta(playerData(LVL, NewHP, MHP, AttP, Def, Exp, Gold)).
+    asserta(playerData(LVL, NewHP, MHP, AttP, Def, Exp, Gold)),
+    check_player_death.
 
 slime_attack :-
     battle_slime(Att, _, _),
@@ -642,6 +695,8 @@ slime_attack :-
     AttDealt is Att - Def,
     AttDealt =< 0, !,
     write('You take no damage from the Slime'), nl.
+
+/* Wolf Attack */
 
 wolf_attack :-
     battle_wolf(Att, _, _),
@@ -651,7 +706,8 @@ wolf_attack :-
     format('You take ~w damage from the Wolf', [AttDealt]), nl,
     NewHP is HP - AttDealt,
     retract(playerData(_, _, _, _, _, _, _)),
-    asserta(playerData(LVL, NewHP, MHP, AttP, Def, Exp, Gold)).
+    asserta(playerData(LVL, NewHP, MHP, AttP, Def, Exp, Gold)),
+    check_player_death.
 
 wolf_attack :-
     battle_wolf(Att, _, _),
@@ -659,6 +715,8 @@ wolf_attack :-
     AttDealt is Att - Def,
     AttDealt =< 0, !,
     write('You take no damage from the Wolf'), nl.
+
+/* Goblin Attack */
 
 goblin_attack :-
     battle_goblin(Att, _, _),
@@ -668,7 +726,8 @@ goblin_attack :-
     format('You take ~w damage from the Goblin', [AttDealt]), nl,
     NewHP is HP - AttDealt,
     retract(playerData(_, _, _, _, _, _, _)),
-    asserta(playerData(LVL, NewHP, MHP, AttP, Def, Exp, Gold)).
+    asserta(playerData(LVL, NewHP, MHP, AttP, Def, Exp, Gold)),
+    check_player_death.
 
 goblin_attack :-
     battle_goblin(Att, _, _),
@@ -677,16 +736,47 @@ goblin_attack :-
     AttDealt =< 0, !,
     write('You take no damage from the Goblin'), nl.
 
-/* Wolf Attack */
-wolf_attack :-
-    battle_wolf(Att,_,_).
-    /* Insert Get Player Data Health */
+/* Metal Slime Attack */
 
-/* Goblin Attack */
-goblin_attack :-
-    battle_goblin(Att, _, _).
-    /* Insert Get Player Data Health */
-    /* Calculate Damage Taken */
+metalslime_attack :-
+    battle_metalslime(_),
+    random(1, 101, Randomize),
+    Randomize > 60, !,
+    random(1, 4, AttDealt),
+    playerData(LVL, HP, MHP, AttP, Def, Exp, Gold),
+    AttDealt > 0, !,
+    format('You take ~w damage from the Metal Slime', [AttDealt]), nl,
+    NewHP is HP - AttDealt,
+    retract(playerData(_, _, _, _, _, _, _)),
+    asserta(playerData(LVL, NewHP, MHP, AttP, Def, Exp, Gold)),
+    check_player_death.
+
+metalslime_attack :-
+    battle_metalslime(_),
+    random(1, 101, Randomize),
+    Randomize > 30, !,
+    write('You take no damage from the Metal Slime'), nl.
+
+metalslime_attack :-
+    battle_metalslime(_),
+    write('Metal Slime has ran away, good luck next time'), nl,
+    end_encounter.
+
+/*playerData(Level,HP,MaxHP,Att,Def,Exp,Gold)*/
+check_player_death :-
+    playerData(LVL, HP, MaxHP, Att, Def, Exp, Gold),
+    HP > 0, !.
+
+check_player_death :-
+    playerData(LVL, HP, MaxHP, Att, Def, Exp, Gold),
+    HP =< 0, !,
+    end_battle,
+    write('You have been defeated, goodbye friend'), nl,
+    retract(started(_)),
+    retract(playerData(_, _, _, _, _, _, _)),
+    retract(job(_)),
+    asserta(started(no)),
+    ((retract(battle_slime(_,_,_))); (retract(battle_wolf(_,_,_))); (retract(battle_goblin(_,_,_))); (retract(battle_metalslime(_)))).
 
 /* Add Enemy Attacking to Special Attack */
 %playerData(_, _, _, AttackP, _, _, _),
@@ -740,6 +830,22 @@ specialAttack :-
     special_increment,
     check_death_goblin,
     goblin_attack.
+
+/* Special Attacking Metal Slime */
+specialAttack :-
+    encounter(yes),
+    playerData(A, B, C, AttP, D, E, F),
+    battle_metalslime(HP), !,
+    special_counter(Count),
+    check_special(Count), !,
+    retract(battle_metalslime(_)),
+    NewAttP is AttP * 3,
+    NewHP is HP - NewAttP,
+    format('You dealt ~w damage to the Metal Slime', [NewAttP]), nl,
+    asserta(battle_metalslime(NewHP)),
+    special_increment,
+    check_death_metalslime,
+    metalslime_attack.
 
 specialAttack :-
     encounter(yes),
