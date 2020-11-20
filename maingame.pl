@@ -874,16 +874,29 @@ check_special(X) :-
     format('You have to wait ~w turns to use special attack', [Z]), !, fail.
     % cut and fail %
 
-
-/* tentuin begini apa engga pakenya ngurangin hp enemy */
-
 special_increment :-
     special_counter(Count),
     retract(special_counter(_)),
     NewCount is Count + 1,
     asserta(special_counter(NewCount)).
     
+/* Heal */
+add_health(Amount) :-
+    playerData(LVL, HP, MAXHP, Att, Def, EXP, Gold),
+    NewHP is HP + Amount,
+    NewHP < MAXHP, !,
+    retract(playerData(_, _, _, _, _, _, _)),
+    asserta(playerData(LVL, NewHP, MAXHP, Att, Def, EXP, Gold)),
+    format('You healed for ~w Health Points', [Amount]), nl.
 
+add_health(Amount) :-
+    playerData(LVL, HP, MAXHP, Att, Def, EXP, Gold),
+    NewHP is HP + Amount,
+    NewHP > MAXHP, !,
+    HPHealed is MAXHP - HP,
+    retract(playerData(_, _, _, _, _, _, _)),
+    asserta(playerData(LVL, MAXHP, MAXHP, Att, Def, EXP, Gold)),
+    format('You healed for ~w Health Points', [HPHealed]), nl.
 
 /*--------------------------------------------------------------------------*/
 
@@ -892,6 +905,91 @@ special_increment :-
 /*--------------------------------------------------------------------------*/
 
 /* Quest */
+:- dynamic(quest/5).
+:- dynamic(in_quest/1).
+
+in_quest(no).
+
+quest_reward_check :-
+    in_quest(yes),
+    quest(0, 0, 0, Gold, Exp), !,
+    write('Quest Completed!'), nl,
+    add_gold(Gold),
+    add_exp(Exp),
+    retract(in_quest(_)),
+    asserta(in_quest(no)),
+    retract(quest(_, _, _, _, _)).
+
+quest_reward_check :-
+    in_quest(yes).
+
+quest_menu :-
+    in_quest(no), !,
+    random(1, 5, Slime1),
+    random(1, 4, Wolf1),
+    random(1, 3, Goblin1),
+    random(1, 5, Slime2),
+    random(1, 4, Wolf2),
+    random(1, 3, Goblin2),
+    random(1, 5, Slime3),
+    random(1, 4, Wolf3),
+    random(1, 3, Goblin3),
+    random(100, 301, Gold1),
+    random(100, 301, Gold2),
+    random(100, 301, Gold3),
+    random(100, 150, Exp1),
+    random(100, 150, Exp2),
+    random(100, 150, Exp3),
+    format('1. Quest 1     : ~w Slimes, ~w Wolves, ~w Goblins', [Slime1, Wolf1, Goblin1]), nl,
+    format('   Gold Reward : ~w', [Gold1]), nl,
+    format('   Exp Reward  : ~w', [Exp1]), nl,
+    format('2. Quest 2     : ~w Slimes, ~w Wolves, ~w Goblins', [Slime2, Wolf2, Goblin2]), nl,
+    format('   Gold Reward : ~w', [Gold2]), nl,
+    format('   Exp Reward  : ~w', [Exp2]), nl,
+    format('3. Quest 3     : ~w Slimes, ~w Wolves, ~w Goblins', [Slime3, Wolf3, Goblin3]), nl,
+    format('   Gold Reward : ~w', [Gold3]), nl,
+    format('   Exp Reward  : ~w', [Exp3]), nl,
+    write('4. Leave.'), nl,
+    read(Choice),
+    (   
+        (
+            Choice = 1, 
+            asserta(quest(Slime1, Wolf1, Goblin1, Gold1, Exp1)),
+            retract(in_quest(no)),
+            asserta(in_quest(yes)), !
+        );
+        (
+            Choice = 2,
+            asserta(quest(Slime2, Wolf2, Goblin2, Gold2, Exp2)),
+            retract(in_quest(no)),
+            asserta(in_quest(yes)), !
+        );
+        (
+            Choice = 3,
+            asserta(quest(Slime3, Wolf3, Goblin3, Gold3, Exp3)),
+            retract(in_quest(no)),
+            asserta(in_quest(yes)), !
+        )
+    ).
+
+quest_menu :-
+    in_quest(yes), !,
+    write('You must finish your current quest first before taking another one'), nl.
+
+quest_status :-
+    in_quest(yes), !,
+    quest(Slime, Wolf, Goblin, Gold, Exp),
+    format('Slimes remaining    : ~w', [Slime]), nl,
+    format('Wolves remaining    : ~w', [Wolf]), nl,
+    format('Goblins remaining   : ~w', [Goblin]), nl,
+    format('Gold reward         : ~w', [Gold]), nl,
+    format('Exp reward          : ~w', [Exp]), nl, !.
+
+quest_status :-
+    in_quest(no), !,
+    write('You\'re currently not taking any quest'), nl,
+    write('Go to the Quest Centre to take a quest'), nl.
+
 
 /*--------------------------------------------------------------------------*/
 
