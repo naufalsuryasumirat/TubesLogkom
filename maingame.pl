@@ -1314,7 +1314,7 @@ equip(Item) :-
     asserta(playerData(Lvl,HP,MaxHP,AttBef,DefAft,Exp,Gold))
     )).
 
-remeWeapon :-
+remWeapon :-
     inventory(_,Capacity),
     equipped(Weapon,Armor),
     maxCapacity(MaxCap),
@@ -1348,7 +1348,7 @@ showEq :-
     equipped(Weapon,Armor),
     displayItemName(Weapon,X),
     displayItemName(Armor,Y),
-    write('Your Equpment :'), nl,
+    write('Your Equipment :'), nl,
     format('Weapon  : ~w', [X]) , nl,
     format('Armor   : ~w', [Y]), nl.
 
