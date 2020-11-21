@@ -2,6 +2,9 @@
 :- dynamic(encounter/1).
 :- dynamic(started/1).
 :- dynamic(inventory/2).
+:- dynamic(equipped/2).
+:- dynamic(job/1).
+:- dynamic(playerData/7).
 
 tiles(4,4).
 tiles(5,4).
@@ -11,12 +14,39 @@ tiles(4,6).
 
 player(9,9).
 
-:- dynamic(job/1).
-
-
+equipped(none,none).
 bosNaga(1,1).
-store(9, 7).
-quest(1, 10).
+store(9,7).
+quest(1,10).
+
+/* LIST NAMA Item */
+displayItemName(none, 'None').
+displayItemName(healing_potion, 'Healing Potion').
+
+displayItemName(wooden_sword, 'Wooden Sword (Swordsman)').
+displayItemName(stone_sword, 'Stone Sword (Swordsman)').
+displayItemName(iron_sword, 'Iron Sword (Swordsman)').
+displayItemName(diamond_sword,'Diamond Sword (Swordsman)').
+
+displayItemName(studded_armor, 'Studded Armor (Swordsman)').
+displayItemName(iron_armor , 'Iron Armor (Swordsman)').
+displayItemName(reinforced_armor, 'Reinforced Armor (Swordsman)').
+
+displayItemName(wooden_bow, 'Wooden Bow (Archer)').
+displayItemName(compound_bow, 'Compound Bow (Archer)').
+displayItemName(fire_bow, 'Fire Bow (Archer)').
+
+displayItemName(leather_armor, 'Leather Armor (Archer)').
+displayItemName(chain_armor, 'Chain Armor (Archer)').
+displayItemName(scale_armor, 'Scale Armor (Archer)').
+
+displayItemName(flame_staff, 'Flame Staff (Sorcerer)').
+displayItemName(thunderbolt_staff, 'Thunderbolt Staff (Sorcerer)').
+displayItemName(void_staff, 'Void Staff (Sorcerer)').
+
+displayItemName(novice_robe, 'Novice Robe (Sorcerer)').
+displayItemName(apprentice_robe, 'Apprentice Robe (Sorcerer)').
+displayItemName(expert_robe, 'Expert Robe (Sorcerer)').
 
 /*--------------------------------------------------------------------------*/
 
@@ -30,31 +60,37 @@ start :-
     write('1. Swordsman'),nl,
     write('2. Archer'),nl,
     write('3. Sorcerer'),nl,
-    read(JobNum),
+    read(JobNum),!,
     ((
-    JobNum = 1, 
+    JobNum == 1,!,
     asserta(job(swordsman)),
     asserta(playerData(1,100,100,10,6,0,0)),
+    asserta(inventory([[1,wooden_sword]],1)),
+    equip(wooden_sword),
     write('Anda memilih class Swordsman, good luck boi'), 
     nl);
     (
-    JobNum = 2, 
+    JobNum == 2,!,
     asserta(job(archer)),
     asserta(playerData(1,80,80,12,4,0,0)),
+    asserta(inventory([[1,wooden_bow]],1)),
+    equip(wooden_bow),
     write('Anda memilih class Archer, good luck boi'), 
     nl);
     (
-    JobNum = 3, 
+    JobNum == 3,!,
     asserta(job(sorcerer)), 
     asserta(playerData(1,60,60,15,3,0,0)),
+    asserta(inventory([[1,flame_staff]],1)),
+    equip(flame_staff),
     write('Anda memilih class Sorcerer, good luck boi'), 
     nl
     )),
-    asserta(inventory([],0)),
+    insertPlenty(5,healing_potion),
     retract(started(no)),
-    asserta(started(yes)),!,
+    asserta(started(yes)).
     
-    map.
+    %map.
 
 start :-
     started(yes), !,
@@ -495,6 +531,10 @@ specialAttack :-
 
 /*--------------------------------------------------------------------------*/
 
+/* Inventory */
+
+maxCapacity(15).
+
 /* Fungsi dasar stack */
 
 front(Queue,Result) :-
@@ -522,7 +562,7 @@ back(Queue,Result) :-
 
 /*insertPlenty untuk memasukkan item berjumlah >= 1 ke inventori dengan cara melakukan insertOne sebanyak jumlah item */
 insertPlenty(1,Item) :-
-    insertOne(Item).
+    insertOne(Item),!.
 insertPlenty(JumlahItem,Item) :-
     JumlahItem>1,
     insertOne(Item),
@@ -532,7 +572,8 @@ insertPlenty(JumlahItem,Item) :-
 /*insertOne untuk memasukkan 1 item ke inventory*/
 insertOne(Item) :-
     inventory(Arr,Capacity),
-    Capacity < 15,
+    maxCapacity(MaxCap),
+    Capacity < MaxCap,!,
     ArrInvChecking = Arr,
     insRekursif(Item,ArrInvChecking,[],ResultAkhir),
     TotalItemInventory is Capacity + 1,
@@ -571,8 +612,8 @@ insertOne(Item) :-
         ResultAkhir     :   Array hasil insRekursif
 */
     
-rekurensFrontPopBack(ArrInvChecking,Front,PoppedArr,Nama1ItemInv) :-
-    ArrInvChecking \== [],
+rekInsDelSearch(ArrInvChecking,Front,PoppedArr,Nama1ItemInv) :-
+    ArrInvChecking \== [],!,
     front(ArrInvChecking,Front),
     pop(ArrInvChecking,PoppedArr),
     back(Front,Nama1ItemInv).
@@ -584,13 +625,13 @@ insRekursif(Item,[],ArrayPindahan,ResultAkhir) :-
 
 %Rekurens
 insRekursif(Item,ArrInvChecking,ArrayPindahan,ResultAkhir) :-
-    rekurensFrontPopBack(ArrInvChecking,Front,PoppedArr,Nama1ItemInv),
+    rekInsDelSearch(ArrInvChecking,Front,PoppedArr,Nama1ItemInv),
     Item \== Nama1ItemInv,!,
     push(Front,ArrayPindahan,ArrayPindahanT),
     insRekursif(Item,PoppedArr,ArrayPindahanT,ResultAkhir).
 
 insRekursif(Item,ArrInvChecking,ArrayPindahan,ResultAkhir) :-
-    rekurensFrontPopBack(ArrInvChecking,Front,PoppedArr,Nama1ItemInv),
+    rekInsDelSearch(ArrInvChecking,Front,PoppedArr,Nama1ItemInv),
     Item == Nama1ItemInv,!,
     front(Front,Jumlah1ItemInv),
     PlusOneItem is Jumlah1ItemInv + 1,
@@ -606,8 +647,7 @@ insRekursif(Item,ArrInvChecking,ArrayPindahan,ResultAkhir) :-
 deletePlenty(1,Item) :-
     deleteOne(Item),!.
 deletePlenty(JumlahItem,Item) :-
-    JumlahItem > 1,
-    inventory(Arr,Capacity),
+    JumlahItem > 1,!,
     deleteOne(Item),
     Decr is JumlahItem-1,
     deletePlenty(Decr,Item).
@@ -615,17 +655,17 @@ deletePlenty(JumlahItem,Item) :-
 /*deleteOne untuk memasukkan 1 item ke inventory*/
 deleteOne(Item) :-
     inventory(Arr,Capacity),
-    Capacity > 0,
+    Capacity > 0,!,
     ArrInvChecking = Arr,
-    delRekursif(Item,ArrInvChecking,[],ResultAkhir).
+    delRekursif(Item,ArrInvChecking,[],_).
     
 %Basis
-delRekursif(Item,[],ArrayPindahan,ResultAkhir) :-
+delRekursif(_,[],ArrayPindahan,ResultAkhir) :-
     reverse(ArrayPindahan,ResultAkhir).
 
 %Rekurens
 delRekursif(Item,ArrInvChecking,ArrayPindahan,ResultAkhir) :-
-    rekurensFrontPopBack(ArrInvChecking,Front,PoppedArr,Nama1ItemInv),
+    rekInsDelSearch(ArrInvChecking,Front,PoppedArr,Nama1ItemInv),
 
     Item \== Nama1ItemInv,!,
 
@@ -633,7 +673,7 @@ delRekursif(Item,ArrInvChecking,ArrayPindahan,ResultAkhir) :-
     delRekursif(Item,PoppedArr,ArrayPindahanT,ResultAkhir).
 
 delRekursif(Item,ArrInvChecking,ArrayPindahan,ResultAkhir) :-
-    rekurensFrontPopBack(ArrInvChecking,Front,PoppedArr,Nama1ItemInv),
+    rekInsDelSearch(ArrInvChecking,Front,PoppedArr,Nama1ItemInv),
 
     Item == Nama1ItemInv,!,
 
@@ -655,23 +695,167 @@ delRekursif(Item,ArrInvChecking,ArrayPindahan,ResultAkhir) :-
     retract(inventory(Arr,Capacity)),
     asserta(inventory(ResultAkhir,TotalItemInventory)).
 
+/* SHOW INVENTORY */
+
+showInv :-
+    inventory(_,Capacity),
+    maxCapacity(MaxCap),
+    format('Your Inventory (~w/~w):', [Capacity,MaxCap]),nl,
+    inventory(Arr,_),
+    ArrInvChecking = Arr,
+    showRekursif(ArrInvChecking).
+
+showRekursif([]):-
+    1 == 1.
+
+showRekursif(ArrInvChecking) :-
+    front(ArrInvChecking,Head),
+    front(Head,JumlahItem),
+    back(Head,NamaItem),
+    displayItemName(NamaItem,DisName),
+    format('~w ~w', [JumlahItem,DisName]),nl,
+    pop(ArrInvChecking,PoppedArr),
+    showRekursif(PoppedArr).
+
+
 /* SEARCH */
 
 search(Item) :-
-    inventory(Arr,Capacity),
+    inventory(Arr,_),
     ArrInvChecking = Arr,
     searchRekursif(Item,ArrInvChecking,[]).
 
-searchRekursif(Item,[],ArrayPindahan) :-
+searchRekursif(_,[],_) :-
     1 == 0.
 
 searchRekursif(Item,ArrInvChecking,ArrayPindahan) :- 
-    rekurensFrontPopBack(ArrInvChecking,Front,PoppedArr,Nama1ItemInv),
+    rekInsDelSearch(ArrInvChecking,Front,PoppedArr,Nama1ItemInv),
     Item \== Nama1ItemInv,!,
     push(Front,ArrayPindahan,ArrayPindahanT),
     searchRekursif(Item,PoppedArr,ArrayPindahanT).
 
-searchRekursif(Item,ArrInvChecking,ArrayPindahan) :-
-    rekurensFrontPopBack(ArrInvChecking,Front,PoppedArr,Nama1ItemInv),
+searchRekursif(Item,ArrInvChecking,_) :-
+    rekInsDelSearch(ArrInvChecking,_,_,Nama1ItemInv),
     Item == Nama1ItemInv,!,
     1 == 1.
+
+/*--------------------------------------------------------------------------*/
+
+/* EQUIPMENT */
+
+/* EQUIPMENT LIST */
+equipment(weapon, swordsman, wooden_sword, 3, 5).
+equipment(weapon, swordsman, stone_sword,  6, 8).
+equipment(weapon, swordsman, iron_sword, 9, 12).
+equipment(weapon, swordsman, diamond_sword, 12, 20).
+
+equipment(armor, swordsman, studded_armor, 4, 6).
+equipment(armor, swordsman, iron_armor, 7, 10).
+equipment(armor, swordsman, reinforced_armor, 12, 16).
+
+equipment(weapon, archer, wooden_bow, 5, 5).
+equipment(weapon, archer, compound_bow, 10, 8).
+equipment(weapon, archer, fire_bow, 15, 12).
+
+equipment(armor, archer, leather_armor, 3, 5).
+equipment(armor, archer, chain_armor, 5, 8).
+equipment(armor, archer, scale_armor, 9, 12).
+
+equipment(weapon, sorcerer, flame_staff, 8, 5).
+equipment(weapon, sorcerer, thunderbolt_staff, 12, 8).
+equipment(weapon, sorcerer, void_staff, 18, 12).
+
+equipment(armor, sorcerer, novice_robe, 2, 5).
+equipment(armor, sorcerer, apprentice_robe, 3, 8).
+equipment(armor, sorcerer, expert_robe, 4, 12).
+
+
+
+/* RULES */
+
+equip(Item) :-
+    search(Item),
+    equipment(Type,ItemJob,Item,CombatValue,_),!,
+    job(PlayerJob),
+    equipped(Weapon,Armor),
+    playerData(Lvl,HP,MaxHP,AttBef,DefBef,Exp,Gold),
+    ItemJob == PlayerJob,
+    deleteOne(Item),
+    ((
+    Type == weapon,
+    Weapon == none,!,
+    AttAft is AttBef + CombatValue,
+    retract(equipped(_,_)),
+    asserta(equipped(Item,Armor)),
+    retract(playerData(_,_,_,_,_,_,_)),
+    asserta(playerData(Lvl,HP,MaxHP,AttAft,DefBef,Exp,Gold))
+    );(
+    Type == weapon,
+    insertOne(Weapon),
+    equipment(_,_,Weapon,PrevCombatValue,_),
+    AttAft is AttBef - PrevCombatValue + CombatValue,
+    retract(equipped(_,_)),
+    asserta(equipped(Item,Armor)),
+    retract(playerData(_,_,_,_,_,_,_)),
+    asserta(playerData(Lvl,HP,MaxHP,AttAft,DefBef,Exp,Gold))
+    );(
+    Type == armor,
+    Armor == none,!,
+    retract(equipped(_,_)),
+    asserta(equipped(Weapon,Item)),
+    retract(playerData(_,_,_,_,_,_,_)),
+    asserta(playerData(Lvl,HP,MaxHP,AttBef,DefAft,Exp,Gold))
+    );(
+    Type == armor,
+    insertOne(Armor),
+    equipment(_,_,Armor,PrevCombatValue,_),
+    DefAft is DefBef - PrevCombatValue + CombatValue,
+    retract(equipped(_,_)),
+    asserta(equipped(Weapon,Item)),
+    retract(playerData(_,_,_,_,_,_,_)),
+    asserta(playerData(Lvl,HP,MaxHP,AttBef,DefAft,Exp,Gold))
+    )).
+
+remeWeapon :-
+    inventory(_,Capacity),
+    equipped(Weapon,Armor),
+    maxCapacity(MaxCap),
+    Capacity < MaxCap,
+    Weapon \== none,
+    equipment(_,_,Weapon,CombatValue,_),!,
+    playerData(Lvl,HP,MaxHP,AttBef,DefBef,Exp,Gold),
+    AttAft is AttBef - CombatValue,
+    retract(playerData(_,_,_,_,_,_,_)),
+    asserta(playerData(Lvl,HP,MaxHP,AttAft,DefBef,Exp,Gold)),
+    retract(equipped(_,_)),
+    asserta(equipped(none,Armor)),
+    insertOne(Weapon).
+
+remArmor :-
+    inventory(_,Capacity),
+    equipped(Weapon,Armor),
+    maxCapacity(MaxCap),
+    Capacity < MaxCap,
+    Armor \== none,
+    equipment(_,_,_,Armor,CombatValue,_),!,
+    playerData(Lvl,HP,MaxHP,AttBef,DefBef,Exp,Gold),
+    DefAft is DefBef - CombatValue,
+    retract(playerData(_,_,_,_,_,_,_)),
+    asserta(playerData(Lvl,HP,MaxHP,AttBef,DefAft,Exp,Gold)),
+    retract(equipped(_,_)),
+    asserta(equipped(Weapon,none)),
+    insertOne(Armor).
+
+showEq :-
+    equipped(Weapon,Armor),
+    displayItemName(Weapon,X),
+    displayItemName(Armor,Y),
+    write('Your Equpment :'), nl,
+    format('Weapon  : ~w', [X]) , nl,
+    format('Armor   : ~w', [Y]), nl.
+
+isEquipment(Item) :-
+    equipment(_,_,Item,_,_).
+
+equipmentType(Item, Type) :-
+    equipmet(Type,_,Item,_,_).
