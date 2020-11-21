@@ -2,9 +2,6 @@
 :- dynamic(encounter/1).
 :- dynamic(started/1).
 :- dynamic(inventory/2).
-:- dynamic(equipped/2).
-:- dynamic(job/1).
-:- dynamic(playerData/7).
 
 tiles(4,4).
 tiles(5,4).
@@ -14,10 +11,12 @@ tiles(4,6).
 
 player(9,9).
 
-equipped(none,none).
+:- dynamic(job/1).
+
+
 bosNaga(1,1).
-store(9,7).
-quest(1,10).
+store(9, 7).
+quest(1, 10).
 
 /* LIST NAMA Item */
 displayItemName(none, 'None').
@@ -60,37 +59,31 @@ start :-
     write('1. Swordsman'),nl,
     write('2. Archer'),nl,
     write('3. Sorcerer'),nl,
-    read(JobNum),!,
+    read(JobNum),
     ((
-    JobNum == 1,!,
+    JobNum = 1, 
     asserta(job(swordsman)),
     asserta(playerData(1,100,100,10,6,0,0)),
-    asserta(inventory([[1,wooden_sword]],1)),
-    equip(wooden_sword),
     write('Anda memilih class Swordsman, good luck boi'), 
     nl);
     (
-    JobNum == 2,!,
+    JobNum = 2, 
     asserta(job(archer)),
     asserta(playerData(1,80,80,12,4,0,0)),
-    asserta(inventory([[1,wooden_bow]],1)),
-    equip(wooden_bow),
     write('Anda memilih class Archer, good luck boi'), 
     nl);
     (
-    JobNum == 3,!,
+    JobNum = 3, 
     asserta(job(sorcerer)), 
     asserta(playerData(1,60,60,15,3,0,0)),
-    asserta(inventory([[1,flame_staff]],1)),
-    equip(flame_staff),
     write('Anda memilih class Sorcerer, good luck boi'), 
     nl
     )),
-    insertPlenty(5,healing_potion),
+    asserta(inventory([],0)),
     retract(started(no)),
-    asserta(started(yes)).
+    asserta(started(yes)),!,
     
-    %map.
+    map.
 
 start :-
     started(yes), !,
@@ -327,6 +320,8 @@ printJob :-
 status :-
     playerData(Level,HP,MaxHP,Att,Def,Exp,Gold),
     job(Job),
+    exp(XP),
+    ToNextLVL is XP - Exp,
     write('Your status : '),  nl,
     write('Job     : '),printJob, nl,
     format('Level   : ~w', [Level]), nl,
@@ -334,7 +329,8 @@ status :-
     format('Attack  : ~w', [Att]) , nl,
     format('Defense : ~w', [Def]), nl,
     format('Exp     : ~w', [Exp]), nl,
-    format('Gold    : ~w', [Gold]),nl.
+    format('Gold    : ~w', [Gold]), nl,
+    format('Next LVL: ~w Exp', [ToNextLVL]), nl.
 
 
 /*--------------------------------------------------------------------------*/
@@ -385,32 +381,33 @@ encounter_chance(X) :-
     status_enemy, !.
 
 encounter_chance(X) :-
-    between(21, 30, X),
+    between(21, 35, X),
     start_encounter,
     write('Anda bertemu dengan wolf'), nl,
     battle_menu,
     wolf(_, Attack, Defense, HP),
     playerData(LVL, _, _, _, _, _, _),
-    NewAttack is Attack + (LVL * 2),
-    NewDefense is Defense + (LVL * 1),
+    NewAttack is Attack + (LVL * 1.75),
+    NewDefense is Defense + (LVL * 0.75),
     NewHP is HP + (LVL * 5),
     asserta(battle_wolf(NewAttack, NewDefense, NewHP)),
     status_enemy, !.
 
 encounter_chance(X) :-
-    between(31, 40, X),
+    between(36, 45, X),
     start_encounter,
     write('Anda bertemu dengan goblin'), nl,
     battle_menu,
     goblin(_, Attack, Defense, HP),
     playerData(LVL, _, _, _, _, _, _),
-    NewAttack is Attack + (LVL * 2),
-    NewDefense is Defense + (LVL * 2),
+    NewAttack is Attack + (LVL * 1.75),
+    NewDefense is Defense + (LVL * 1.75),
     NewHP is HP + (LVL * 7),
     asserta(battle_goblin(NewAttack, NewDefense, NewHP)),
     status_enemy, !.
 
-encounter_chance(69) :-
+encounter_chance(X) :-
+    between(61, 65, X),
     start_encounter,
     write('Anda bertemu dengan metal slime'), nl,
     battle_menu,
@@ -812,7 +809,17 @@ check_player_death :-
     retract(playerData(_, _, _, _, _, _, _)),
     retract(job(_)),
     asserta(started(no)),
-    ((retract(battle_slime(_,_,_))); (retract(battle_wolf(_,_,_))); (retract(battle_goblin(_,_,_))); (retract(battle_metalslime(_)))).
+    retract(in_quest(_)),
+    asserta(in_quest(no)),
+    retract(encounter(_)),
+    asserta(encounter(no)),
+    (
+        (retract(battle_slime(_,_,_))); 
+        (retract(battle_wolf(_,_,_))); 
+        (retract(battle_goblin(_,_,_))); 
+        (retract(battle_metalslime(_))); 
+        (retract(quest(_, _, _, _, _)))
+    ).
 
 /* Add Enemy Attacking to Special Attack */
 %playerData(_, _, _, AttackP, _, _, _),
@@ -928,7 +935,7 @@ add_health(Amount) :-
 add_health(Amount) :-
     playerData(LVL, HP, MAXHP, Att, Def, EXP, Gold),
     NewHP is HP + Amount,
-    NewHP > MAXHP, !,
+    NewHP >= MAXHP, !,
     HPHealed is MAXHP - HP,
     retract(playerData(_, _, _, _, _, _, _)),
     asserta(playerData(LVL, MAXHP, MAXHP, Att, Def, EXP, Gold)),
