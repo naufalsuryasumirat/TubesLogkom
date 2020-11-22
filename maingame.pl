@@ -69,22 +69,25 @@ start :-
     JobNum = 1, 
     asserta(job(swordsman)),
     asserta(playerData(1,100,100,10,6,0,0)),
+    asserta(equipped(wooden_sword,none)),
     write('Anda memilih class Swordsman, good luck boi'), 
     nl);
     (
     JobNum = 2, 
     asserta(job(archer)),
     asserta(playerData(1,80,80,12,4,0,0)),
+    asserta(equipped(wooden_bow,none)),
     write('Anda memilih class Archer, good luck boi'), 
     nl);
     (
     JobNum = 3, 
     asserta(job(sorcerer)), 
     asserta(playerData(1,60,60,15,3,0,0)),
+    asserta(equipped(flame_staff,none)),
     write('Anda memilih class Sorcerer, good luck boi'), 
     nl
     )),
-    asserta(inventory([],0)),
+    asserta(inventory([[5,healing_potion]],5)),
     retract(started(no)),
     asserta(started(yes)),!,
 
@@ -889,6 +892,8 @@ check_player_death :-
     write('You have been defeated, goodbye friend'), nl,
     retract(started(_)),
     retract(playerData(_, _, _, _, _, _, _)),
+    retract(inventory(_,_)),
+    retract(equipped(_,_)),
     retract(job(_)),
     asserta(started(no)),
     retract(in_quest(_)),
@@ -1713,6 +1718,7 @@ equip(Item) :-
     );(
     Type == armor,
     Armor == none,!,
+    DefAft is DefBef + CombatValue,
     retract(equipped(_,_)),
     asserta(equipped(Weapon,Item)),
     retract(playerData(_,_,_,_,_,_,_)),
@@ -1749,7 +1755,7 @@ remArmor :-
     maxCapacity(MaxCap),
     Capacity < MaxCap,
     Armor \== none,
-    equipment(_,_,_,Armor,CombatValue,_),!,
+    equipment(_,_,Armor,CombatValue,_),!,
     playerData(Lvl,HP,MaxHP,AttBef,DefBef,Exp,Gold),
     DefAft is DefBef - CombatValue,
     retract(playerData(_,_,_,_,_,_,_)),
@@ -1766,8 +1772,4 @@ showEq :-
     format('Weapon  : ~w', [X]) , nl,
     format('Armor   : ~w', [Y]), nl.
 
-isEquipment(Item) :-
-    equipment(_,_,Item,_,_).
 
-equipmentType(Item, Type) :-
-    equipmet(Type,_,Item,_,_).
