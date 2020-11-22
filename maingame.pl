@@ -5,6 +5,7 @@
 :- dynamic(equipped/2).
 :- dynamic(job/1).
 :- dynamic(playerData/7).
+:- dynamic(inStore/1).
 
 tiles(4,4).
 tiles(5,4).
@@ -20,6 +21,7 @@ store(9,7).
 quest(1,10).
 
 /* LIST NAMA Item */
+
 displayItemName(none, 'None').
 displayItemName(healing_potion, 'Healing Potion').
 
@@ -192,6 +194,13 @@ map :-
 /*--------------------------------------------------------------------------*/
 
 /* WASD */
+
+w :-
+    started(yes),
+    inStore(yes),!,
+    write('Anda sedang di dalam store.'), nl, 
+    leave_menu.
+
 w :-
     started(yes),
     encounter(no),
@@ -204,6 +213,7 @@ w :-
     asserta(player(X2, Y2)),
     retract(player(X, Y)), !,
     check_lock(X2,Y2), !.
+
 
 w :-
     started(yes),
@@ -219,6 +229,12 @@ w :-
     started(no),
     encounter(no),
     write('Anda belum memulai game'), nl, !.
+
+a :-
+    started(yes),
+    inStore(yes),!,
+    write('Anda sedang di dalam store.'), nl, 
+    leave_menu.
 
 a :-
     started(yes),
@@ -250,6 +266,12 @@ a :-
 
 s :-
     started(yes),
+    inStore(yes),!,
+    write('Anda sedang di dalam store.'), nl,
+    leave_menu.
+
+s :-
+    started(yes),
     encounter(no),
     player(X, Y),
     Y2 is Y - 1,
@@ -278,6 +300,12 @@ s :-
 
 d :-
     started(yes),
+    inStore(yes),!,
+    write('Anda sedang di dalam store.'), nl, 
+    leave_menu.
+
+d :-
+    started(yes),
     encounter(no),
     player(X, Y),
     X2 is X - 1,
@@ -303,6 +331,8 @@ d :-
     started(no),
     encounter(no),
     write('Anda belum memulai game'), nl, !.
+
+
 
 /*--------------------------------------------------------------------------*/
 
@@ -437,7 +467,10 @@ check_lock(X, Y) :-
 
 check_lock(X,Y) :-
     store(X,Y), !,
-    write('Anda berada dalam Store, mau beli apa?'), nl.
+    retract(inStore(no)),
+    asserta(inStore(yes)),
+    write('Selamat datang di Store!'), nl,
+    store_menu.
 
 check_lock(X, Y) :-
     bosNaga(X, Y), !,
@@ -938,6 +971,207 @@ add_health(Amount) :-
 
 /* Store */
 
+
+/* NON EQUIPMENT PRICE LIST */
+/* Format : (ItemName},BuyPrice,SellPrice)*/
+
+nonEqPrice(healing_potion,80,20).
+
+/* GACHA PRICE */
+gachaPrice(500).
+
+inStore(no).
+
+add_gold_sell(X) :-
+    retract(playerData(LVL, HP, MAXHP, Att, Def, Exp, Gold)),
+    NewGold is Gold + X,
+    asserta(playerData(LVL, HP, MAXHP, Att, Def, Exp, NewGold)).
+
+store_menu :-
+    write('Apa yang anda ingin lakukan?'),nl,
+    write('1. Beli barang'),nl,
+    write('2. Jual barang'),nl,
+    write('3. Pergi dari toko'),nl,
+    write('4. Intip inventory'),nl,
+    write('5. Intip dompet'),nl,
+    read(Pilihan),
+    nl,
+    ((
+        Pilihan == 1,!,
+        buy_menu
+    );(
+        Pilihan == 2,!,
+        sell_menu
+    );(
+        Pilihan == 3,!,
+        leave_menu
+    );(
+        Pilihan == 4,!,
+        showInv,nl,
+        store_menu
+    );(
+        Pilihan == 5,!,
+        playerData(_,_,_,_,_,_,Gold),
+        format('Jumlah Gold Anda : ~w',[Gold]),nl,nl,
+        store_menu
+    )).
+
+buy_menu :-
+    playerData(Lvl,HP,MaxHP,Att,Def,Exp,Gold),
+    inventory(_,Capacity),
+    maxCapacity(MaxCap),
+    write('Apa yang anda ingin beli? (NOTE: Pastikan anda memiliki space inventory yang cukup)'),nl,
+    format('Jumlah Item Inventory : (~w/~w)',[Capacity,MaxCap]),nl,
+    write('+--------------------------------+'),nl,
+    write('| List Item          | Harga     |'),nl,
+    write('+-------------------+------------+'),nl,
+    write('| 1. Gacha           | 1000 gold |'),nl,
+    write('| 2. Healing Potions |   80 gold |'),nl,
+    write('+--------------------+-----------+'),nl,
+    write('| 3. Tidak jadi beli |    :(     |'),nl,
+    write('+--------------------------------+'),nl,
+    read(Pilihan),nl,
+    ((
+        Pilihan == 1,!,
+        gachaPrice(X),
+        AfterGold is Gold - X,
+        ((
+            AfterGold < 0,!,
+            write('Gold anda tidak cukup.'),nl
+        );(
+            retract(playerData(_,_,_,_,_,_,_)),
+            asserta(playerData(Lvl,HP,MaxHP,Att,Def,Exp,AfterGold)),
+            gacha
+        ))
+        
+    );(
+        Pilihan == 2,!,
+        nonEqPrice(healing_potion,BuyPrice,_),
+        write('Berapa banyak? '), read(Amount),
+        AfterGold is Gold - Amount * BuyPrice,
+        ((
+            AfterGold < 0,!,
+            write('Gold anda tidak cukup.'),nl
+        );(
+            insertPlenty(Amount,healing_potion),
+            retract(playerData(_,_,_,_,_,_,_)),
+            asserta(playerData(Lvl,HP,MaxHP,Att,Def,Exp,AfterGold)),
+            write('Transaksi sukses. Terima kasih.'),nl
+        ))
+    );(
+        Pilihan == 3
+    )),
+    store_menu.
+
+gacha :-
+    random(1,113,X),
+    ((
+        X =< 10,!,
+        Item = iron_sword
+    );(
+        X =< 20,!,
+        Item = compound_bow
+    );(
+        X =< 30,!,
+        Item = thunderbolt_staff
+    );(
+        X =< 40,!,
+        Item = studded_armor
+    );( 
+        X =< 50,!,
+        Item = leather_armor      
+    );(
+        X =< 60,!,
+        Item = novice_robe
+    );(
+        X =< 78,!,
+        Item = iron_armor
+    );(
+        X =< 86,!,
+        Item = chain_armor
+    );(
+        X =< 94,!,
+        Item = apprentice_robe
+    );(
+        X =< 105,!,
+        Item = diamond_sword
+    );(
+        X =< 105,!,
+        Item = fire_bow 
+    );(
+        X =< 110,!,
+        Item = void_staff
+    );(
+        X =< 112,!,
+        Item = reinforced_armor
+    )),
+    displayItemName(Item,DisplayItem),
+    format('Selamat! Anda mendapatkan ~w!',[DisplayItem]),nl,
+    insertOne(Item).
+
+
+sell_menu :-
+    write('Apa yang anda ingin jual?'),nl,
+    write('Format : NamaItem diapit petik 1, lengkap dengan kelas jika equipment.'),nl,
+    showInv,
+    read(ItemDisName),nl,
+    ((
+        \+ displayItemName(ItemName,ItemDisName),!,
+        write('Anda tidak memiliki item dengan nama itu.'),nl
+    );(
+        displayItemName(ItemName,ItemDisName),
+        \+ search(ItemName),!,
+        write('Anda tidak memiliki item dengan nama itu.'),nl
+    );( 
+        displayItemName(ItemName,ItemDisName),
+        playerData(_,_,_,_,_,_,Gold),
+        searchItemAmount(ItemName,Amount),
+        ((
+            equipment(_,_,ItemName,_,Val),!,
+            format('Saya akan membeli satu ~w dengan harga ~w.',[ItemDisName, Val]),nl
+        );(
+            nonEqPrice(ItemName,_,Val),
+            format('Saya akan membeli satu ~w dengan harga ~w.',[ItemDisName, Val]),nl
+        )),
+        format('Anda memiliki ~w ~w. Berapa yang anda ingin jual? ', [Amount,ItemDisName]),
+        read(SellAmount),
+        ((
+            SellAmount > Amount,!,
+            write('Jumlah melebihi apa yang anda miliki')
+        );(
+            equipment(_,_,ItemName,_,Val),!,
+            deletePlenty(SellAmount,ItemName),
+            TotalGain is Val * SellAmount,
+            add_gold_sell(TotalGain),
+            format('Terima kasih! Ini ~w gold untuk Anda.',[TotalGain])
+        );(
+            nonEqPrice(ItemName,_,Val),
+            deletePlenty(SellAmount,ItemName),
+            TotalGain is Val * SellAmount,
+            add_gold_sell(TotalGain),
+            format('Terima kasih! Ini ~w gold untuk Anda.', [TotalGain])
+        ))
+    )),
+    nl,
+    store_menu.
+
+leave_menu :-
+    write('Apakah anda yakin ingin pergi dari toko?'),nl,
+    write('1. Ya'),nl,
+    write('2. Tidak'),nl,
+    read(Pilihan),
+    ((
+    Pilihan == 1,!,
+    retract(inStore(yes)),
+    asserta(inStore(no)),
+    write('Terima kasih atas kunjungannya. Sampai jumpa!')
+    );(
+    Pilihan == 2,!,
+    store_menu
+    )).
+
+
+
 /*--------------------------------------------------------------------------*/
 
 /* Quest */
@@ -1236,6 +1470,28 @@ searchRekursif(Item,ArrInvChecking,_) :-
     rekInsDelSearch(ArrInvChecking,_,_,Nama1ItemInv),
     Item == Nama1ItemInv,!,
     1 == 1.
+
+
+searchItemAmount(Item,Amount) :-
+    inventory(Arr,_),
+    ArrInvChecking = Arr,
+    searchAmRekursif(Item,ArrInvChecking,[],Amount).
+
+searchAmRekursif(_,[],_,Amount) :-
+    Amount is -1.
+
+searchAmRekursif(Item,ArrInvChecking,ArrayPindahan,Amount) :- 
+    rekInsDelSearch(ArrInvChecking,Front,PoppedArr,Nama1ItemInv),
+    Item \== Nama1ItemInv,!,
+    push(Front,ArrayPindahan,ArrayPindahanT),
+    searchAmRekursif(Item,PoppedArr,ArrayPindahanT,Amount).
+
+searchAmRekursif(Item,ArrInvChecking,_,Amount) :-
+    rekInsDelSearch(ArrInvChecking,Front,PoppedArr,Nama1ItemInv),
+    Item == Nama1ItemInv,!,
+    front(Front,Amount).
+    
+
 
 /*--------------------------------------------------------------------------*/
 
