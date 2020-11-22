@@ -944,6 +944,37 @@ add_health(Amount) :-
 /*--------------------------------------------------------------------------*/
 
 /* Store */
+shop :-
+	write('What You Buying?:'),nl,
+	write('1. Gacha'), nl,
+	write('2. Potion'), nl,
+	read(X),
+	buy(X),
+	!.
+
+buy(1) :-
+	playerData(LVL, HP, MAXHP, Att, Def, EXP, Gold),
+	Gold > 1000,
+	random(1,1000,Rando),
+	gacha(Rando).
+
+buy(2) :-
+	playerData(LVL, HP, MAXHP, Att, Def, EXP, Gold),
+	Gold > 1000,
+	EndGold is X - 1000,
+	retract(playerData(_, _, _, _, _, _, _)),
+	asserta(playerData(LVL, HP, MAXHP, Att, Def, EXP, EndGold)),
+	insertOne(healing_potion).
+    write('You bought healing potion'),nl.
+
+gacha(X) :-
+	X = 1,
+	insertOne(diamond_sword),
+    write('You got Diamond Sword').
+gacha(X) :-
+	X > 2, X =< 999,
+	insertPlenty(2,wooden_sword),
+    write('You got Wooden Sword x2').
 
 /*--------------------------------------------------------------------------*/
 
