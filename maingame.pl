@@ -15,10 +15,12 @@ tiles(4,6).
 
 player(9,9).
 
-equipped(none,none).
+:- dynamic(job/1).
+
+
 bosNaga(1,1).
-store(9,7).
-quest(1,10).
+store(9, 7).
+quest(1, 10).
 
 /* LIST NAMA Item */
 
@@ -62,37 +64,31 @@ start :-
     write('1. Swordsman'),nl,
     write('2. Archer'),nl,
     write('3. Sorcerer'),nl,
-    read(JobNum),!,
+    read(JobNum),
     ((
-    JobNum == 1,!,
+    JobNum = 1, 
     asserta(job(swordsman)),
     asserta(playerData(1,100,100,10,6,0,0)),
-    asserta(inventory([[1,wooden_sword]],1)),
-    equip(wooden_sword),
     write('Anda memilih class Swordsman, good luck boi'), 
     nl);
     (
-    JobNum == 2,!,
+    JobNum = 2, 
     asserta(job(archer)),
     asserta(playerData(1,80,80,12,4,0,0)),
-    asserta(inventory([[1,wooden_bow]],1)),
-    equip(wooden_bow),
     write('Anda memilih class Archer, good luck boi'), 
     nl);
     (
-    JobNum == 3,!,
+    JobNum = 3, 
     asserta(job(sorcerer)), 
     asserta(playerData(1,60,60,15,3,0,0)),
-    asserta(inventory([[1,flame_staff]],1)),
-    equip(flame_staff),
     write('Anda memilih class Sorcerer, good luck boi'), 
     nl
     )),
-    insertPlenty(5,healing_potion),
+    asserta(inventory([],0)),
     retract(started(no)),
-    asserta(started(yes)).
-    
-    %map.
+    asserta(started(yes)),!,
+
+    map.
 
 start :-
     started(yes), !,
@@ -185,7 +181,7 @@ printCenterX(0,_):-
 
 map :- 
     started(yes), !,
-    printMap(12, 12), !.
+    printMap(17, 17), !.
 
 map :-
     started(no), !,
@@ -207,11 +203,12 @@ w :-
     player(X, Y),
     Y2 is Y + 1,
     X2 is X,
-    Y2 =\= 11,
+    Y2 =\= 16,
     (\+ tiles(X2, Y2)),
-    write('Anda bergerak satu langkah ke Utara'), nl,
     asserta(player(X2, Y2)),
     retract(player(X, Y)), !,
+    %map,
+    write('Anda bergerak satu langkah ke Utara'), nl,
     check_lock(X2,Y2), !.
 
 
@@ -242,11 +239,12 @@ a :-
     player(X, Y),
     X2 is X + 1,
     Y2 is Y,
-    X2 =\= 11,
+    X2 =\= 16,
     (\+ tiles(X2, Y2)),
-    write('Anda bergerak satu langkah ke Barat'), nl,
     asserta(player(X2, Y2)),
     retract(player(X, Y)), !,
+    %map,
+    write('Anda bergerak satu langkah ke Barat'), nl,
     check_lock(X2,Y2), !.
 
 a :-
@@ -278,9 +276,10 @@ s :-
     X2 is X,
     Y2 =\= 0,
     (\+ tiles(X2, Y2)),
-    write('Anda bergerak satu langkah ke Selatan'), nl,
     asserta(player(X2, Y2)),
     retract(player(X, Y)), !,
+    %map,
+    write('Anda bergerak satu langkah ke Selatan'), nl,
     check_lock(X2,Y2), !.
 
 s :-
@@ -312,9 +311,10 @@ d :-
     Y2 is Y,
     X2 =\= 0,
     (\+ tiles(X2, Y2)),
-    write('Anda bergerak satu langkah ke Timur'), nl,
     asserta(player(X2, Y2)),
     retract(player(X, Y)), !,
+    %map,
+    write('Anda bergerak satu langkah ke Timur'), nl,
     check_lock(X2,Y2), !.
 
 d :-
@@ -331,7 +331,6 @@ d :-
     started(no),
     encounter(no),
     write('Anda belum memulai game'), nl, !.
-
 
 
 /*--------------------------------------------------------------------------*/
@@ -357,6 +356,8 @@ printJob :-
 status :-
     playerData(Level,HP,MaxHP,Att,Def,Exp,Gold),
     job(Job),
+    exp(XP),
+    ToNextLVL is XP - Exp,
     write('Your status : '),  nl,
     write('Job     : '),printJob, nl,
     format('Level   : ~w', [Level]), nl,
@@ -364,7 +365,8 @@ status :-
     format('Attack  : ~w', [Att]) , nl,
     format('Defense : ~w', [Def]), nl,
     format('Exp     : ~w', [Exp]), nl,
-    format('Gold    : ~w', [Gold]),nl.
+    format('Gold    : ~w', [Gold]), nl,
+    format('Next LVL: ~w Exp', [ToNextLVL]), nl.
 
 
 /*--------------------------------------------------------------------------*/
@@ -415,32 +417,33 @@ encounter_chance(X) :-
     status_enemy, !.
 
 encounter_chance(X) :-
-    between(21, 30, X),
+    between(21, 35, X),
     start_encounter,
     write('Anda bertemu dengan wolf'), nl,
     battle_menu,
     wolf(_, Attack, Defense, HP),
     playerData(LVL, _, _, _, _, _, _),
-    NewAttack is Attack + (LVL * 2),
-    NewDefense is Defense + (LVL * 1),
+    NewAttack is Attack + (LVL * 1.75),
+    NewDefense is Defense + (LVL * 0.75),
     NewHP is HP + (LVL * 5),
     asserta(battle_wolf(NewAttack, NewDefense, NewHP)),
     status_enemy, !.
 
 encounter_chance(X) :-
-    between(31, 40, X),
+    between(41, 50, X),
     start_encounter,
     write('Anda bertemu dengan goblin'), nl,
     battle_menu,
     goblin(_, Attack, Defense, HP),
     playerData(LVL, _, _, _, _, _, _),
-    NewAttack is Attack + (LVL * 2),
-    NewDefense is Defense + (LVL * 2),
+    NewAttack is Attack + (LVL * 1.75),
+    NewDefense is Defense + (LVL * 1.75),
     NewHP is HP + (LVL * 7),
     asserta(battle_goblin(NewAttack, NewDefense, NewHP)),
     status_enemy, !.
 
-encounter_chance(69) :-
+encounter_chance(X) :-
+    between(61, 65, X),
     start_encounter,
     write('Anda bertemu dengan metal slime'), nl,
     battle_menu,
@@ -457,6 +460,30 @@ encounter_chance(69) :-
 encounter_chance(101) :-
     start_encounter,
     write('Anda bertemu dengan bosNaga'), nl.
+
+check_lock(X, Y) :-
+    X >= 13,
+    Y >= 13,
+    random(-2, 6, Z), %80 persen bertemu dengan slime
+    encounter_chance(Z), !.
+
+check_lock(X, Y) :-
+    X >= 13,
+    Y =< 3,
+    random(31, 39, Z),
+    encounter_chance(Z), !.
+
+check_lock(X, Y) :-
+    X =< 3,
+    Y >= 13, 
+    random(45, 53, Z),
+    encounter_chance(Z), !.
+
+check_lock(13, 6) :-
+    random(64, 68, Z), !,
+    encounter_chance(Z), !.
+
+/*  ADD Store */
 
 check_lock(X, Y) :-
     \+ store(X, Y),
@@ -532,6 +559,22 @@ status_enemy :-
     started(yes),
     encounter(no),
     write('Anda tidak sedang dalam battle'), nl, !.
+
+enemy_zone :-
+    quest_counter(X),
+    X >= 5, !,
+    write('Slime  Zone      : X > 13, Y > 13'), nl,
+    write('Wolf   Zone      : X > 13, Y < 5'), nl,
+    write('Goblin Zone      : X < 5 , Y > 13'), nl,
+    write('Metal Slime Zone : X = 13, Y = 6'), nl.
+
+enemy_zone :-
+    quest_counter(X),
+    X < 5, !,
+    write('Slime  Zone      : X >  13, Y >  13'), nl,
+    write('Wolf   Zone      : X >  13, Y <  5'), nl,
+    write('Goblin Zone      : X <  5 , Y >  13'), nl,
+    write('Metal Slime Zone : X = ???, Y = ???'), nl.
 
 /*--------------------------------------------------------------------------*/
 /* TEST*/
@@ -648,7 +691,8 @@ check_death_slime :-
     battle_slime(_, _, X), !,
     X =< 0,
     retract(battle_slime(_, _, _)),
-    /* Inset Quest Counter Here */
+    dec_slime, %%%%% TEST
+    /* Insert Quest Counter Here */
     end_battle, %Special Attack di reset saat end_encounter
     write('Slime defeated, great job!'), nl,
     add_gold(10),
@@ -662,7 +706,8 @@ check_death_wolf :-
     battle_wolf(_, _, X), !,
     X =< 0, !,
     retract(battle_wolf(_, _, _)),
-    /* Inset Quest Counter Here */
+    dec_wolf, %%%%% TEST
+    /* Insert Quest Counter Here */
     end_battle,
     write('Wolf defeated, great job!'), nl,
     add_gold(50),
@@ -676,6 +721,7 @@ check_death_goblin :-
     battle_goblin(_, _, X), !,
     X =< 0, !,
     retract(battle_goblin(_, _, _)),
+    dec_goblin, %%%%% TEST
     /* Insert Quest Counter Here */
     end_battle,
     write('Goblin defeated, great job!'), nl,
@@ -823,7 +869,7 @@ metalslime_attack :-
 metalslime_attack :-
     battle_metalslime(_),
     random(1, 101, Randomize),
-    Randomize > 30, !,
+    Randomize > 50, !,
     write('You take no damage from the Metal Slime'), nl.
 
 metalslime_attack :-
@@ -845,7 +891,20 @@ check_player_death :-
     retract(playerData(_, _, _, _, _, _, _)),
     retract(job(_)),
     asserta(started(no)),
-    ((retract(battle_slime(_,_,_))); (retract(battle_wolf(_,_,_))); (retract(battle_goblin(_,_,_))); (retract(battle_metalslime(_)))).
+    retract(in_quest(_)),
+    asserta(in_quest(no)),
+    retract(encounter(_)),
+    asserta(encounter(no)),
+    retract(quest_counter(_)),
+    asserta(quest_counter(0)),
+    (
+        (retract(battle_slime(_,_,_))); 
+        (retract(battle_wolf(_,_,_))); 
+        (retract(battle_goblin(_,_,_))); 
+        (retract(battle_metalslime(_))); 
+        (retract(quest(_, _, _, _, _)))
+        %%%%% ADD TIAP FAKTA YANG KALO MATI DI RETRACT
+    ).
 
 /* Add Enemy Attacking to Special Attack */
 %playerData(_, _, _, AttackP, _, _, _),
@@ -961,7 +1020,7 @@ add_health(Amount) :-
 add_health(Amount) :-
     playerData(LVL, HP, MAXHP, Att, Def, EXP, Gold),
     NewHP is HP + Amount,
-    NewHP > MAXHP, !,
+    NewHP >= MAXHP, !,
     HPHealed is MAXHP - HP,
     retract(playerData(_, _, _, _, _, _, _)),
     asserta(playerData(LVL, MAXHP, MAXHP, Att, Def, EXP, Gold)),
@@ -970,6 +1029,37 @@ add_health(Amount) :-
 /*--------------------------------------------------------------------------*/
 
 /* Store */
+shop :-
+	write('What You Buying?:'),nl,
+	write('1. Gacha'), nl,
+	write('2. Potion'), nl,
+	read(X),
+	buy(X),
+	!.
+
+buy(1) :-
+	playerData(LVL, HP, MAXHP, Att, Def, EXP, Gold),
+	Gold > 1000,
+	random(1,1000,Rando),
+	gacha(Rando).
+
+buy(2) :-
+	playerData(LVL, HP, MAXHP, Att, Def, EXP, Gold),
+	Gold > 1000,
+	EndGold is X - 1000,
+	retract(playerData(_, _, _, _, _, _, _)),
+	asserta(playerData(LVL, HP, MAXHP, Att, Def, EXP, EndGold)),
+	insertOne(healing_potion).
+    write('You bought healing potion'),nl.
+
+gacha(X) :-
+	X = 1,
+	insertOne(diamond_sword),
+    write('You got Diamond Sword').
+gacha(X) :-
+	X > 2, X =< 999,
+	insertPlenty(2,wooden_sword),
+    write('You got Wooden Sword x2').
 
 
 /* NON EQUIPMENT PRICE LIST */
@@ -1177,7 +1267,9 @@ leave_menu :-
 /* Quest */
 :- dynamic(quest/5).
 :- dynamic(in_quest/1).
+:- dynamic(quest_counter/1).
 
+quest_counter(0).
 in_quest(no).
 
 quest_reward_check :-
@@ -1188,12 +1280,16 @@ quest_reward_check :-
     add_exp(Exp),
     retract(in_quest(_)),
     asserta(in_quest(no)),
-    retract(quest(_, _, _, _, _)).
+    retract(quest(_, _, _, _, _)),
+    quest_counter(Count),
+    NewCount is Count + 1,
+    retract(quest_counter(_)),
+    asserta(quest_counter(NewCount)).
 
 quest_reward_check :-
     in_quest(yes).
 
-quest_menu :-
+quest_menu :- %%%%% ADD IN QUEST LOCATION?
     in_quest(no), !,
     random(1, 5, Slime1),
     random(1, 4, Wolf1),
@@ -1226,22 +1322,25 @@ quest_menu :-
             Choice = 1, 
             asserta(quest(Slime1, Wolf1, Goblin1, Gold1, Exp1)),
             retract(in_quest(no)),
-            asserta(in_quest(yes)), !
+            asserta(in_quest(yes)),
+            write('Quest 1 Accepted'), !
         );
         (
             Choice = 2,
             asserta(quest(Slime2, Wolf2, Goblin2, Gold2, Exp2)),
             retract(in_quest(no)),
-            asserta(in_quest(yes)), !
+            asserta(in_quest(yes)),
+            write('Quest 2 Accepted'), !
         );
         (
             Choice = 3,
             asserta(quest(Slime3, Wolf3, Goblin3, Gold3, Exp3)),
             retract(in_quest(no)),
-            asserta(in_quest(yes)), !
+            asserta(in_quest(yes)),
+            write('Quest 3 Accepted'), !
         )
     ).
-
+%%%%%%%%%%
 quest_menu :-
     in_quest(yes), !,
     write('You must finish your current quest first before taking another one'), nl.
@@ -1259,6 +1358,65 @@ quest_status :-
     in_quest(no), !,
     write('You\'re currently not taking any quest'), nl,
     write('Go to the Quest Centre to take a quest'), nl.
+
+dec_slime :-
+    in_quest(yes),
+    quest(Slime, Wolf, Goblin, Gold, Exp),
+    Slime > 0, !,
+    retract(quest(_, _, _, _, _)),
+    NewSlime is Slime - 1,
+    asserta(quest(NewSlime, Wolf, Goblin, Gold, Exp)),
+    quest_reward_check, !.
+
+dec_slime :-
+    in_quest(yes), !.
+
+dec_slime :-
+    in_quest(no).
+
+dec_wolf :-
+    in_quest(yes),
+    quest(Slime, Wolf, Goblin, Gold, Exp),
+    Wolf > 0, !,
+    retract(quest(_, _, _, _, _)),
+    NewWolf is Wolf - 1,
+    asserta(quest(Slime, NewWolf, Goblin, Gold, Exp)),
+    quest_reward_check, !.
+
+dec_wolf :-
+    in_quest(yes), !.
+
+dec_wolf :-
+    in_quest(no).
+
+dec_goblin :-
+    in_quest(yes),
+    quest(Slime, Wolf, Goblin, Gold, Exp),
+    Goblin > 0, !,
+    retract(quest(_, _, _, _, _)),
+    NewGoblin is Goblin - 1,
+    asserta(quest(Slime, Wolf, NewGoblin, Gold, Exp)),
+    quest_reward_check, !.
+
+dec_goblin :-
+    in_quest(yes), !.
+
+dec_goblin :-
+    in_quest(no).
+
+save :-
+    open('save.txt', write, SAVE),
+    set_output(SAVE),
+    listing,
+    close(S),
+    write('Game Saved'), nl.
+
+/* Mungkin Save file nya ga begini, harus dibagi jadi dua file kalo ga nanti pas 
+load ada fakta yang double */
+
+load :-
+    ['save.txt'],
+    write('Game Loaded'), nl.
 
 
 /*--------------------------------------------------------------------------*/
