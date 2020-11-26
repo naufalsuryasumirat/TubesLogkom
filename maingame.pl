@@ -522,7 +522,9 @@ status_enemy :-
     format('Attack : ~w', [Att]), nl,
     format('Defense: ~w', [Def]), nl,
     format('HP     : ~w/~w', [HP, HPCap]), nl, !. */
-
+status_enemy :-
+    encounter(no),
+    write('Tidak ada musuh saat ini'),nl.
 status_enemy :-
     battle_slime(Att, Def, HP), !,
     playerData(Lvl, _, _, _, _, _, _),
